@@ -5,6 +5,14 @@
   "keywords": ["oauth", "oauth2", "busarm"],
   "main": "./index.js",
   "types": "./index.d.ts",
+  "typings": "./index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Busarm/busarm-oauth-client-js"
+  },
+  "bugs": {
+    "url": "https://github.com/Busarm/busarm-oauth-client-js/issues"
+  },
   "devDependencies": {
     "@types/gulp": "^4.0.9",
     "@types/gulp-rename": "^2.0.1",
