@@ -2,19 +2,19 @@ const { src, dest, watch, series, parallel } = require("gulp");
 const rename = require("gulp-rename");
 const uglify = require("gulp-uglify");
 const prettier = require("gulp-prettier");
-const ts = require('gulp-typescript');
+const ts = require("gulp-typescript");
 
 // TS configuration
 var tsProject = ts.createProject({
   declaration: true,
-  module: 'es6',
-  target: 'es6',
-  moduleResolution: 'node',
+  module: "es6",
+  target: "es6",
+  moduleResolution: "node",
   noImplicitAny: true,
-  noEmitOnError: false
+  noEmitOnError: false,
 });
 const tsFormatterTask = function () {
-  return src('index.ts')
+  return src("index.ts")
     .pipe(prettier({ singleQuote: true }))
     .pipe(
       dest(function (f) {
@@ -23,19 +23,18 @@ const tsFormatterTask = function () {
     );
 };
 const tsTask = function () {
-  return src('index.ts')
-      .pipe(tsProject())
-      .pipe(
-        dest(function (f) {
-          return f.base;
-        })
-      );
+  return src("index.ts")
+    .pipe(tsProject())
+    .pipe(
+      dest(function (f) {
+        return f.base;
+      })
+    );
 };
-
 
 // JS configuration
 const jsFormatterTask = function () {
-  return src('index.js')
+  return src("index.js")
     .pipe(prettier({ singleQuote: true }))
     .pipe(
       dest(function (f) {
@@ -44,7 +43,7 @@ const jsFormatterTask = function () {
     );
 };
 const jsTask = function () {
-  return src('index.js')
+  return src("index.js")
     .pipe(uglify({ mangle: true, compress: false }))
     .pipe(prettier({ singleQuote: true }))
     .pipe(
@@ -62,11 +61,10 @@ const jsTask = function () {
     .pipe(dest("dist/"));
 };
 
-
 // Watcher configuration
 const watcherTask = function () {
   watch(
-    ['index.ts'],
+    ["index.ts"],
     {
       ignoreInitial: true,
     },
@@ -74,4 +72,10 @@ const watcherTask = function () {
   );
 };
 
-exports.default = series(tsFormatterTask, tsTask, jsFormatterTask, jsTask, watcherTask);
+exports.default = series(
+  tsFormatterTask,
+  tsTask,
+  jsFormatterTask,
+  jsTask,
+  watcherTask
+);

@@ -5,7 +5,7 @@ export declare class OauthStorage {
     static get accessScopeKey(): string;
     static get tokenTypeKey(): string;
     static get expiresInKey(): string;
-    static get currentOauthState(): string;
+    static get currentStateKey(): string;
     /**Save Access data to Local storage
      * @param accessData OauthTokenResponse */
     static saveAccess(accessData: OauthTokenResponse): void;

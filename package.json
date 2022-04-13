@@ -1,7 +1,10 @@
 {
   "name": "busarm-oauth-client-js",
   "description": "",
-  "version": "1.0.0",
+  "version": "1.0.1",
+  "keywords": ["oauth", "oauth2", "busarm"],
+  "main": "./index.js",
+  "types": "./index.d.ts",
   "devDependencies": {
     "@types/gulp": "^4.0.9",
     "@types/gulp-rename": "^2.0.1",

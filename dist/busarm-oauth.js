@@ -14,8 +14,8 @@ export class OauthStorage {
   static get expiresInKey() {
     return 'expires_in';
   }
-  static get currentOauthState() {
-    return 'current_oauth_state';
+  static get currentStateKey() {
+    return 'current_state';
   }
   static saveAccess(e) {
     OauthStorage.set(
@@ -45,7 +45,7 @@ export class OauthStorage {
     OauthStorage.remove(OauthStorage.accessScopeKey);
     OauthStorage.remove(OauthStorage.tokenTypeKey);
     OauthStorage.remove(OauthStorage.expiresInKey);
-    OauthStorage.remove(OauthStorage.currentOauthState);
+    OauthStorage.remove(OauthStorage.currentStateKey);
   }
   static set(e, t, s = false) {
     if (s) {
@@ -328,13 +328,13 @@ export class Oauth {
           const t = OauthUtils.getUrlParam('error');
           const s = OauthUtils.getUrlParam('error_description');
           if (OauthUtils.assertAvailable(e)) {
-            const a = OauthStorage.get(OauthStorage.currentOauthState);
+            const a = OauthStorage.get(OauthStorage.currentStateKey);
             c = OauthUtils.assertAvailable(a) ? a : c;
             if (c === OauthUtils.getUrlParam('state')) {
               this.oauthTokenWithAuthorizationCode(e, n, (e, t) => {
                 if (OauthUtils.assertAvailable(e)) {
                   if (OauthUtils.assertAvailable(e.accessToken)) {
-                    OauthStorage.remove(OauthStorage.currentOauthState);
+                    OauthStorage.remove(OauthStorage.currentStateKey);
                     OauthStorage.saveAccess(e);
                     if (typeof r.callback === 'function') {
                       r.callback(OauthStorage.accessToken);
@@ -366,7 +366,7 @@ export class Oauth {
               }
             }
           } else if (OauthUtils.assertAvailable(t)) {
-            OauthStorage.remove(OauthStorage.currentOauthState);
+            OauthStorage.remove(OauthStorage.currentStateKey);
             if (OauthUtils.assertAvailable(s)) {
               if (typeof r.callback === 'function') {
                 r.callback(false, s);
@@ -501,7 +501,7 @@ export class Oauth {
     if (!OauthUtils.assertAvailable(t)) {
       throw new Error("'redirect_url' Required");
     }
-    OauthStorage.set(OauthStorage.currentOauthState, a, true);
+    OauthStorage.set(OauthStorage.currentStateKey, a, true);
     const r = {
       client_id: this.clientId,
       scope: e.join(' '),
@@ -517,7 +517,7 @@ export class Oauth {
     if (!OauthUtils.assertAvailable(t)) {
       throw new Error("'redirect_url' Required");
     }
-    OauthStorage.set(OauthStorage.currentOauthState, a, true);
+    OauthStorage.set(OauthStorage.currentStateKey, a, true);
     const r = {
       client_id: this.clientId,
       scope: e.join(' '),
@@ -536,7 +536,7 @@ export class Oauth {
     if (!OauthUtils.assertAvailable(e)) {
       throw new Error("'scope' Required");
     }
-    OauthStorage.set(OauthStorage.currentOauthState, a, true);
+    OauthStorage.set(OauthStorage.currentStateKey, a, true);
     const r = {
       client_id: this.clientId,
       scope: e.join(' '),

@@ -20,8 +20,8 @@ export class OauthStorage {
     return 'expires_in';
   }
 
-  static get currentOauthState() {
-    return 'current_oauth_state';
+  static get currentStateKey() {
+    return 'current_state';
   }
 
   /**Save Access data to Local storage
@@ -56,7 +56,7 @@ export class OauthStorage {
     OauthStorage.remove(OauthStorage.accessScopeKey);
     OauthStorage.remove(OauthStorage.tokenTypeKey);
     OauthStorage.remove(OauthStorage.expiresInKey);
-    OauthStorage.remove(OauthStorage.currentOauthState);
+    OauthStorage.remove(OauthStorage.currentStateKey);
   }
 
   /** Set data - localstorage
@@ -499,7 +499,7 @@ export class Oauth {
           const error = OauthUtils.getUrlParam('error');
           const error_description = OauthUtils.getUrlParam('error_description');
           if (OauthUtils.assertAvailable(code)) {
-            const save_state = OauthStorage.get(OauthStorage.currentOauthState);
+            const save_state = OauthStorage.get(OauthStorage.currentStateKey);
             state = OauthUtils.assertAvailable(save_state) ? save_state : state;
             if (state === OauthUtils.getUrlParam('state')) {
               // Get token
@@ -514,7 +514,7 @@ export class Oauth {
                   if (OauthUtils.assertAvailable(token)) {
                     if (OauthUtils.assertAvailable(token.accessToken)) {
                       // Remove instance ID
-                      OauthStorage.remove(OauthStorage.currentOauthState);
+                      OauthStorage.remove(OauthStorage.currentStateKey);
 
                       // save token
                       OauthStorage.saveAccess(token);
@@ -553,7 +553,7 @@ export class Oauth {
             }
           } else if (OauthUtils.assertAvailable(error)) {
             // Remove oauth state
-            OauthStorage.remove(OauthStorage.currentOauthState);
+            OauthStorage.remove(OauthStorage.currentStateKey);
 
             if (OauthUtils.assertAvailable(error_description)) {
               if (typeof params.callback === 'function') {
@@ -744,7 +744,7 @@ export class Oauth {
       throw new Error("'redirect_url' Required");
     }
 
-    OauthStorage.set(OauthStorage.currentOauthState, state, true);
+    OauthStorage.set(OauthStorage.currentStateKey, state, true);
     const params = {
       client_id: this.clientId,
       scope: scope.join(' '),
@@ -776,7 +776,7 @@ export class Oauth {
       throw new Error("'redirect_url' Required");
     }
 
-    OauthStorage.set(OauthStorage.currentOauthState, state, true);
+    OauthStorage.set(OauthStorage.currentStateKey, state, true);
     const params = {
       client_id: this.clientId,
       scope: scope.join(' '),
@@ -811,7 +811,7 @@ export class Oauth {
       throw new Error("'scope' Required");
     }
 
-    OauthStorage.set(OauthStorage.currentOauthState, state, true);
+    OauthStorage.set(OauthStorage.currentStateKey, state, true);
     const params = {
       client_id: this.clientId,
       scope: scope.join(' '),
