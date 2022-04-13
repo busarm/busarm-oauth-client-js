@@ -14,7 +14,7 @@ var tsProject = ts.createProject({
   noEmitOnError: false
 });
 const tsFormatterTask = function () {
-  return src('src/**/*.ts')
+  return src('index.ts')
     .pipe(prettier({ singleQuote: true }))
     .pipe(
       dest(function (f) {
@@ -23,15 +23,19 @@ const tsFormatterTask = function () {
     );
 };
 const tsTask = function () {
-  return src('src/**/*.ts')
+  return src('index.ts')
       .pipe(tsProject())
-      .pipe(dest("dist/"))
+      .pipe(
+        dest(function (f) {
+          return f.base;
+        })
+      );
 };
 
 
 // JS configuration
 const jsFormatterTask = function () {
-  return src(["dist/**/*.js", "!dist/**/*.min.js"])
+  return src('index.js')
     .pipe(prettier({ singleQuote: true }))
     .pipe(
       dest(function (f) {
@@ -40,34 +44,33 @@ const jsFormatterTask = function () {
     );
 };
 const jsTask = function () {
-  return src(["dist/**/*.js", "!dist/**/*.min.js"])
+  return src('index.js')
     .pipe(uglify({ mangle: true, compress: false }))
     .pipe(prettier({ singleQuote: true }))
     .pipe(
-      dest(function (f) {
-        return f.base;
+      rename({
+        basename: "busarm-oauth",
       })
     )
+    .pipe(dest("dist/"))
     .pipe(uglify({ mangle: true, compress: true }))
     .pipe(
       rename({
-        extname: ".min.js",
+        basename: "busarm-oauth.min",
       })
     )
-    .pipe(
-      dest(function (f) {
-        return f.base;
-      })
-    );
+    .pipe(dest("dist/"));
 };
 
+
+// Watcher configuration
 const watcherTask = function () {
   watch(
-    ["src/**/*.ts"],
+    ['index.ts'],
     {
       ignoreInitial: true,
     },
-    series(tsTask, jsTask)
+    series(tsTask, jsFormatterTask, jsTask)
   );
 };
 
