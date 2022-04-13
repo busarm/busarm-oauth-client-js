@@ -1,7 +1,7 @@
 {
   "name": "busarm-oauth-client-js",
   "description": "",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "keywords": ["oauth", "oauth2", "busarm"],
   "main": "./index.js",
   "types": "./index.d.ts",
