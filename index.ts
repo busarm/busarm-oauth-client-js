@@ -16,26 +16,19 @@ export enum OauthStorageKeys {
 export class OauthStorage implements OauthStorageInterface<string> {
     get(key: string): Promise<string> {
         return new Promise((resolve, reject) => {
-            if (typeof sessionStorage !== "undefined") {
-                let data = sessionStorage.getItem(key);
-                if (OauthUtils.assertAvailable(data)) {
-                    resolve(data);
-                } else {
-                    resolve(null);
-                }
-            } else {
-                reject();
-            }
             if (typeof localStorage !== "undefined") {
                 let data = localStorage.getItem(key);
                 if (OauthUtils.assertAvailable(data)) {
-                    resolve(data);
-                } else {
-                    resolve(null);
+                    return resolve(data);
                 }
-            } else {
-                reject();
+            } 
+            if (typeof sessionStorage !== "undefined") {
+                let data = sessionStorage.getItem(key);
+                if (OauthUtils.assertAvailable(data)) {
+                    return resolve(data);
+                }
             }
+            return reject();
         });
     }
     set(key: string, value: string, temporary = false): Promise<void> {

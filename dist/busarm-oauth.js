@@ -41,26 +41,19 @@ export var OauthStorageKeys;
 export class OauthStorage {
   get(s) {
     return new Promise((t, e) => {
-      if (typeof sessionStorage !== 'undefined') {
-        let e = sessionStorage.getItem(s);
-        if (OauthUtils.assertAvailable(e)) {
-          t(e);
-        } else {
-          t(null);
-        }
-      } else {
-        e();
-      }
       if (typeof localStorage !== 'undefined') {
         let e = localStorage.getItem(s);
         if (OauthUtils.assertAvailable(e)) {
-          t(e);
-        } else {
-          t(null);
+          return t(e);
         }
-      } else {
-        e();
       }
+      if (typeof sessionStorage !== 'undefined') {
+        let e = sessionStorage.getItem(s);
+        if (OauthUtils.assertAvailable(e)) {
+          return t(e);
+        }
+      }
+      return e();
     });
   }
   set(s, a, r = false) {
