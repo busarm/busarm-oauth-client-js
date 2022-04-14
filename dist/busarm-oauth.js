@@ -263,6 +263,12 @@ export class Oauth {
       this.storage = new OauthStorage();
     }
   }
+  getStorage() {
+    return this.storage;
+  }
+  setStorage(e) {
+    this.storage = e;
+  }
   saveAccess(e) {
     this.storage.set(
       OauthStorageKeys.AccessTokenKey,
@@ -307,7 +313,7 @@ export class Oauth {
     let c = OauthUtils.assertAvailable(r.state)
       ? r.state
       : OauthUtils.generateKey(32);
-    const u = () => {
+    const h = () => {
       switch (i) {
         case OauthGrantType.Auto:
           if (
@@ -316,7 +322,7 @@ export class Oauth {
           ) {
             i = OauthGrantType.Authorization_Code;
             if (o.includes(i)) {
-              u();
+              h();
             } else {
               r.callback(false);
             }
@@ -326,14 +332,14 @@ export class Oauth {
           ) {
             i = OauthGrantType.User_Credentials;
             if (o.includes(i)) {
-              u();
+              h();
             } else {
               r.callback(false);
             }
           } else {
             i = OauthGrantType.Client_Credentials;
             if (o.includes(i)) {
-              u();
+              h();
             } else {
               r.callback(false);
             }
@@ -464,7 +470,7 @@ export class Oauth {
             if (typeof r.callback === 'function') {
               r.callback(false, e.errorDescription);
               this.clearAccess();
-              u();
+              h();
             }
           } else {
             if (typeof r.callback === 'function') {
@@ -502,11 +508,11 @@ export class Oauth {
           if (OauthUtils.assertAvailable(s)) {
             e(s);
           } else {
-            u();
+            h();
           }
         }
       } else {
-        u();
+        h();
       }
     }
   }

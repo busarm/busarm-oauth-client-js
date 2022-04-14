@@ -120,7 +120,7 @@ export declare class Oauth {
     private readonly authorizeUrl;
     private readonly tokenUrl;
     private readonly verifyTokenUrl;
-    private readonly storage;
+    private storage;
     /**
      * @param {object} data
      * @param {string} data.clientId - Your Application's Client ID
@@ -138,6 +138,16 @@ export declare class Oauth {
         verifyTokenUrl?: string;
         storage?: OauthStorageInterface<string>;
     });
+    /**
+     * Get Oauth Storage
+     * @returns {OauthStorageInterface<string>}
+     */
+    getStorage(): OauthStorageInterface<string>;
+    /**
+     * Set Oauth Storage
+     * @param {OauthStorageInterface<string>} storage
+     */
+    setStorage(storage: OauthStorageInterface<string>): void;
     /**
      * Save Access data to Local storage
      * @param {OauthTokenResponse} accessData

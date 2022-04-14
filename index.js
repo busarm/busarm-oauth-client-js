@@ -352,6 +352,20 @@ export class Oauth {
     }
   }
   /**
+   * Get Oauth Storage
+   * @returns {OauthStorageInterface<string>}
+   */
+  getStorage() {
+    return this.storage;
+  }
+  /**
+   * Set Oauth Storage
+   * @param {OauthStorageInterface<string>} storage
+   */
+  setStorage(storage) {
+    this.storage = storage;
+  }
+  /**
    * Save Access data to Local storage
    * @param {OauthTokenResponse} accessData
    * */
