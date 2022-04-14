@@ -55,7 +55,7 @@ export class OauthStorage {
           return resolve(data);
         }
       }
-      return reject();
+      return resolve(null);
     });
   }
   set(key, value, temporary = false) {

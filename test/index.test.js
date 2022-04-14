@@ -1,5 +1,5 @@
 // Requiring module
-import { equal, notEqual, ok } from "assert";
+import { doesNotReject, doesNotThrow, equal, notEqual, ok, rejects } from "assert";
 import { Oauth } from "../index.js";
 
 describe("Test Features", () => {
@@ -33,7 +33,16 @@ describe("Test Features", () => {
         });
     });
 
-    describe("Storage", () => {
+    describe("Default Storage", () => {
+        it("Should not be empty", () => {
+            notEqual(Oauth.storage, null);
+        });
+        it("Should not reject promise on get", async () => {
+            return doesNotReject(Oauth.storage.get("test"));
+        });
+    });
+
+    describe("Custom Storage", () => {
         let storage = {
             store: {},
             get: async (key) => {
@@ -51,27 +60,27 @@ describe("Test Features", () => {
         };
 
         it("Should not be empty", () => {
-            oauth.storage = storage;
-            notEqual(oauth.storage, null);
+            Oauth.storage = storage;
+            notEqual(Oauth.storage, null);
         });
         it("Should match custom", () => {
-            equal(oauth.storage, storage);
+            equal(Oauth.storage, storage);
         });
 
         it("Should set & get value from storage", async () => {
-            await oauth.storage.set("test", 10);
-            equal(await oauth.storage.get("test"), 10);
+            await Oauth.storage.set("test", 10);
+            equal(await Oauth.storage.get("test"), 10);
         });
         it("Should remove from storage", async () => {
-            await oauth.storage.remove("test");
-            equal(await oauth.storage.get("test"), null);
+            await Oauth.storage.remove("test");
+            equal(await Oauth.storage.get("test"), null);
         });
         it("Should clear storage", async () => {
-            await oauth.storage.set("test", 10);
-            await oauth.storage.set("test2", 11);
-            await oauth.storage.clearAll();
-            equal(await oauth.storage.get("test"), null);
-            equal(await oauth.storage.get("test2"), null);
+            await Oauth.storage.set("test", 10);
+            await Oauth.storage.set("test2", 11);
+            await Oauth.storage.clearAll();
+            equal(await Oauth.storage.get("test"), null);
+            equal(await Oauth.storage.get("test2"), null);
         });
     });
 });

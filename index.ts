@@ -28,7 +28,7 @@ export class OauthStorage implements OauthStorageInterface<string> {
                     return resolve(data);
                 }
             }
-            return reject();
+            return resolve(null);
         });
     }
     set(key: string, value: string, temporary = false): Promise<void> {

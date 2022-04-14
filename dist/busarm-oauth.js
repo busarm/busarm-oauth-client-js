@@ -53,7 +53,7 @@ export class OauthStorage {
           return t(e);
         }
       }
-      return e();
+      return t(null);
     });
   }
   set(s, a, r = false) {
