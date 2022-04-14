@@ -810,7 +810,7 @@ export class Oauth {
             OauthUtils.assertAvailable(OauthUtils.getUrlParam("access_token"))
         ) {
             const accessToken = OauthUtils.getUrlParam("access_token");
-            if (!OauthUtils.hasTokenExpired(accessToken)) {
+            if (!(await OauthUtils.hasTokenExpired(accessToken))) {
                 if (typeof params.callback === "function") {
                     params.callback(
                         OauthUtils.assertAvailable(accessToken)
@@ -832,7 +832,7 @@ export class Oauth {
             );
             /*Token available, check for refreshing*/
             if (OauthUtils.assertAvailable(accessToken)) {
-                if (!OauthUtils.hasTokenExpired(accessToken)) {
+                if (!(await OauthUtils.hasTokenExpired(accessToken))) {
                     if (typeof params.callback === "function") {
                         params.callback(accessToken);
                     }

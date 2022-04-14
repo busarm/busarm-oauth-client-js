@@ -692,7 +692,7 @@ export class Oauth {
       };
       if (OauthUtils.assertAvailable(OauthUtils.getUrlParam('access_token'))) {
         const accessToken = OauthUtils.getUrlParam('access_token');
-        if (!OauthUtils.hasTokenExpired(accessToken)) {
+        if (!(yield OauthUtils.hasTokenExpired(accessToken))) {
           if (typeof params.callback === 'function') {
             params.callback(
               OauthUtils.assertAvailable(accessToken) ? accessToken : true
@@ -712,7 +712,7 @@ export class Oauth {
         );
         /*Token available, check for refreshing*/
         if (OauthUtils.assertAvailable(accessToken)) {
-          if (!OauthUtils.hasTokenExpired(accessToken)) {
+          if (!(yield OauthUtils.hasTokenExpired(accessToken))) {
             if (typeof params.callback === 'function') {
               params.callback(accessToken);
             }

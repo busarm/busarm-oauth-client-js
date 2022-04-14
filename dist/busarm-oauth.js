@@ -531,7 +531,7 @@ export class Oauth {
       };
       if (OauthUtils.assertAvailable(OauthUtils.getUrlParam('access_token'))) {
         const t = OauthUtils.getUrlParam('access_token');
-        if (!OauthUtils.hasTokenExpired(t)) {
+        if (!(yield OauthUtils.hasTokenExpired(t))) {
           if (typeof u.callback === 'function') {
             u.callback(OauthUtils.assertAvailable(t) ? t : true);
           }
@@ -544,7 +544,7 @@ export class Oauth {
         const t = yield Oauth.storage.get(OauthStorageKeys.AccessTokenKey);
         const s = yield Oauth.storage.get(OauthStorageKeys.RefreshTokenKey);
         if (OauthUtils.assertAvailable(t)) {
-          if (!OauthUtils.hasTokenExpired(t)) {
+          if (!(yield OauthUtils.hasTokenExpired(t))) {
             if (typeof u.callback === 'function') {
               u.callback(t);
             }
