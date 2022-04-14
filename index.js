@@ -1,55 +1,32 @@
-/**Store and Retrieve Oauth variables*/
+export var OauthStorageKeys;
+(function (OauthStorageKeys) {
+  OauthStorageKeys['AccessTokenKey'] = 'access_token';
+  OauthStorageKeys['RefreshTokenKey'] = 'refresh_token';
+  OauthStorageKeys['AccessScopeKey'] = 'scope';
+  OauthStorageKeys['TokenTypeKey'] = 'token_type';
+  OauthStorageKeys['ExpiresInKey'] = 'expires_in';
+  OauthStorageKeys['CurrentStateKey'] = 'current_state';
+})(OauthStorageKeys || (OauthStorageKeys = {}));
 export class OauthStorage {
-  static get accessTokenKey() {
-    return 'access_token';
+  get(key) {
+    return new Promise((resolve) => {
+      resolve(OauthStorage.get(key));
+    });
   }
-  static get refreshTokenKey() {
-    return 'refresh_token';
+  set(key, value) {
+    return new Promise((resolve) => {
+      resolve(OauthStorage.set(key, value));
+    });
   }
-  static get accessScopeKey() {
-    return 'scope';
+  remove(key) {
+    return new Promise((resolve) => {
+      resolve(OauthStorage.remove(key));
+    });
   }
-  static get tokenTypeKey() {
-    return 'token_type';
-  }
-  static get expiresInKey() {
-    return 'expires_in';
-  }
-  static get currentStateKey() {
-    return 'current_state';
-  }
-  /**Save Access data to Local storage
-   * @param accessData OauthTokenResponse */
-  static saveAccess(accessData) {
-    OauthStorage.set(
-      OauthStorage.accessTokenKey,
-      OauthUtils.safeString(accessData.accessToken)
-    );
-    OauthStorage.set(
-      OauthStorage.refreshTokenKey,
-      OauthUtils.safeString(accessData.refreshToken)
-    );
-    OauthStorage.set(
-      OauthStorage.accessScopeKey,
-      OauthUtils.safeString(accessData.accessScope)
-    );
-    OauthStorage.set(
-      OauthStorage.tokenTypeKey,
-      OauthUtils.safeString(accessData.tokenType)
-    );
-    OauthStorage.set(
-      OauthStorage.expiresInKey,
-      OauthUtils.safeInt(Math.floor(Date.now() / 1000) + accessData.expiresIn)
-    );
-  }
-  /**Clear all access data from session*/
-  static clearAccess() {
-    OauthStorage.remove(OauthStorage.accessTokenKey);
-    OauthStorage.remove(OauthStorage.refreshTokenKey);
-    OauthStorage.remove(OauthStorage.accessScopeKey);
-    OauthStorage.remove(OauthStorage.tokenTypeKey);
-    OauthStorage.remove(OauthStorage.expiresInKey);
-    OauthStorage.remove(OauthStorage.currentStateKey);
+  clearAll() {
+    return new Promise((resolve) => {
+      resolve(OauthStorage.clearAll());
+    });
   }
   /** Set data - localstorage
    * @param name  name
@@ -108,37 +85,37 @@ export class OauthStorage {
    * @param accessToken String
    * */
   static set accessToken(accessToken) {
-    OauthStorage.set(OauthStorage.accessTokenKey, accessToken);
+    OauthStorage.set(OauthStorageKeys.AccessTokenKey, accessToken);
   }
   /**Get Access Token
    * @return String
    * */
   static get accessToken() {
-    return OauthStorage.get(OauthStorage.accessTokenKey);
+    return OauthStorage.get(OauthStorageKeys.AccessTokenKey);
   }
   /**Get Refresh Token
    * @return String
    * */
   static get refreshToken() {
-    return OauthStorage.get(OauthStorage.refreshTokenKey);
+    return OauthStorage.get(OauthStorageKeys.RefreshTokenKey);
   }
   /**Get Access Scope
    * @return String
    * */
   static get accessScope() {
-    return OauthStorage.get(OauthStorage.accessScopeKey);
+    return OauthStorage.get(OauthStorageKeys.AccessScopeKey);
   }
   /**Get Expires In
    * @return string
    * */
   static get expiresIn() {
-    return OauthStorage.get(OauthStorage.expiresInKey);
+    return OauthStorage.get(OauthStorageKeys.ExpiresInKey);
   }
   /**Get Token Type
    * @return String
    * */
   static get tokenType() {
-    return OauthStorage.get(OauthStorage.tokenTypeKey);
+    return OauthStorage.get(OauthStorageKeys.TokenTypeKey);
   }
 }
 /**Common Functions*/
@@ -333,12 +310,14 @@ export class OauthUtils {
   }
 }
 export class Oauth {
-  /**@param data object
-   * @param data.clientId - Your Application's Client ID
-   * @param data.clientSecret - Your Application's Client Secret
-   * @param data.authorizeUrl - Url to Authorize access (For authorization_code grant_type)
-   * @param data.tokenUrl - Url to obtain token
-   * @param data.verifyTokenUrl - Url to verify token
+  /**
+   * @param {object} data
+   * @param {string} data.clientId - Your Application's Client ID
+   * @param {string} data.clientSecret - Your Application's Client Secret
+   * @param {string} data.authorizeUrl - [GET] Url endpoint to authorize or request access
+   * @param {string} data.tokenUrl - Url endpoint to obtain token
+   * @param {string} data.verifyTokenUrl - [GET] Url endpoint to verify token
+   * @param {OauthStorageInterface<string>} data.storage - Handle custom storage - Default storage = browser localStorage or sessionStorage
    * */
   constructor(data) {
     if (OauthUtils.assertAvailable(data.clientId)) {
@@ -366,16 +345,59 @@ export class Oauth {
     } else {
       throw new Error("'verifyTokenUrl' Required");
     }
+    if (OauthUtils.assertAvailable(data.storage)) {
+      this.storage = data.storage;
+    } else {
+      this.storage = new OauthStorage();
+    }
   }
-  /**Authorize Access to the app
-   * @param params Object
-   * @param params.grant_type default -> client_credentials grantType
-   * @param params.allowed_grant_types grant_type(s) to ignore if OauthGrantType.Auto selected
-   * @param params.redirect_uri For authorization_code grant_type default -> current url
-   * @param params.user_id For authorization_code grant_type
-   * @param params.username For User_Credentials grant_type
-   * @param params.password For User_Credentials grant_type
-   * @param params.callback()
+  /**
+   * Save Access data to Local storage
+   * @param {OauthTokenResponse} accessData
+   * */
+  saveAccess(accessData) {
+    this.storage.set(
+      OauthStorageKeys.AccessTokenKey,
+      OauthUtils.safeString(accessData.accessToken)
+    );
+    this.storage.set(
+      OauthStorageKeys.RefreshTokenKey,
+      OauthUtils.safeString(accessData.refreshToken)
+    );
+    this.storage.set(
+      OauthStorageKeys.AccessScopeKey,
+      OauthUtils.safeString(accessData.accessScope)
+    );
+    this.storage.set(
+      OauthStorageKeys.TokenTypeKey,
+      OauthUtils.safeString(accessData.tokenType)
+    );
+    this.storage.set(
+      OauthStorageKeys.ExpiresInKey,
+      String(
+        OauthUtils.safeInt(Math.floor(Date.now() / 1000) + accessData.expiresIn)
+      )
+    );
+  }
+  /**Clear all access data from session*/
+  clearAccess() {
+    this.storage.remove(OauthStorageKeys.AccessTokenKey);
+    this.storage.remove(OauthStorageKeys.RefreshTokenKey);
+    this.storage.remove(OauthStorageKeys.AccessScopeKey);
+    this.storage.remove(OauthStorageKeys.TokenTypeKey);
+    this.storage.remove(OauthStorageKeys.ExpiresInKey);
+    this.storage.remove(OauthStorageKeys.CurrentStateKey);
+  }
+  /**
+   * Authorize Access to the app
+   * @param {object} params
+   * @param {OauthGrantType} params.grant_type Default - client_credentials grantType
+   * @param {OauthGrantType[]} params.allowed_grant_types grant_type(s) to ignore if {OauthGrantType.Auto} selected
+   * @param {string} params.redirect_uri For authorization_code grant_type default -> current url
+   * @param {string} params.user_id For authorization_code grant_type
+   * @param {string} params.username For password grant_type
+   * @param {string} params.password For password grant_type
+   * @param {(token: string | boolean, msg?: string)} params.callback
    * */
   authorizeAccess(params) {
     let grant_type = OauthUtils.assertAvailable(params.grant_type)
@@ -433,24 +455,27 @@ export class Oauth {
           const error = OauthUtils.getUrlParam('error');
           const error_description = OauthUtils.getUrlParam('error_description');
           if (OauthUtils.assertAvailable(code)) {
-            const save_state = OauthStorage.get(OauthStorage.currentStateKey);
+            const save_state = OauthStorage.get(
+              OauthStorageKeys.CurrentStateKey
+            );
             state = OauthUtils.assertAvailable(save_state) ? save_state : state;
             if (state === OauthUtils.getUrlParam('state')) {
               // Get token
               this.oauthTokenWithAuthorizationCode(
                 code,
                 redirect_uri,
-                /**Ajax Response callback
-                 * @param token OauthTokenResponse
-                 * @param xhr XMLHttpRequest | ActiveXObject
+                /**
+                 * Ajax Response callback
+                 * @param {OauthTokenResponse} token
+                 * @param {XMLHttpRequest} xhr
                  * */
                 (token, xhr) => {
                   if (OauthUtils.assertAvailable(token)) {
                     if (OauthUtils.assertAvailable(token.accessToken)) {
                       // Remove instance ID
-                      OauthStorage.remove(OauthStorage.currentStateKey);
-                      // save token
-                      OauthStorage.saveAccess(token);
+                      OauthStorage.remove(OauthStorageKeys.CurrentStateKey);
+                      // Save token
+                      this.saveAccess(token);
                       if (typeof params.callback === 'function') {
                         params.callback(OauthStorage.accessToken);
                       }
@@ -484,7 +509,7 @@ export class Oauth {
             }
           } else if (OauthUtils.assertAvailable(error)) {
             // Remove oauth state
-            OauthStorage.remove(OauthStorage.currentStateKey);
+            OauthStorage.remove(OauthStorageKeys.CurrentStateKey);
             if (OauthUtils.assertAvailable(error_description)) {
               if (typeof params.callback === 'function') {
                 params.callback(false, error_description);
@@ -505,15 +530,16 @@ export class Oauth {
             params.username,
             params.password,
             scope,
-            /**Ajax Response callback
-             * @param token OauthTokenResponse
-             * @param xhr XMLHttpRequest | ActiveXObject
+            /**
+             * Ajax Response callback
+             * @param {OauthTokenResponse} token
+             * @param {XMLHttpRequest} xhr
              * */
             (token, xhr) => {
               if (OauthUtils.assertAvailable(token)) {
                 if (OauthUtils.assertAvailable(token.accessToken)) {
-                  // save token
-                  OauthStorage.saveAccess(token);
+                  // Save token
+                  this.saveAccess(token);
                   if (typeof params.callback === 'function') {
                     params.callback(OauthStorage.accessToken);
                   }
@@ -539,15 +565,16 @@ export class Oauth {
           // Get token
           this.oauthTokenWithClientCredentials(
             scope,
-            /**Ajax Response callback
-             * @param token OauthTokenResponse
-             * @param xhr XMLHttpRequest | ActiveXObject
+            /**
+             * Ajax Response callback
+             * @param {OauthTokenResponse} token
+             * @param {XMLHttpRequest} xhr
              * */
             (token, xhr) => {
               if (OauthUtils.assertAvailable(token)) {
                 if (OauthUtils.assertAvailable(token.accessToken)) {
-                  // save token
-                  OauthStorage.saveAccess(token);
+                  // Save token
+                  this.saveAccess(token);
                   if (typeof params.callback === 'function') {
                     params.callback(OauthStorage.accessToken);
                   }
@@ -576,27 +603,30 @@ export class Oauth {
     const refreshOauthToken = (refreshToken) => {
       this.oauthRefreshToken(
         refreshToken,
-        /**Ajax Response callback
-         * @param token OauthTokenResponse
-         * @param xhr XMLHttpRequest | ActiveXObject
+        /**
+         * Ajax Response callback
+         * @param {OauthTokenResponse} token
+         * @param {XMLHttpRequest} xhr
          * */
         (token, xhr) => {
           if (OauthUtils.assertAvailable(token)) {
             if (OauthUtils.assertAvailable(token.accessToken)) {
-              // save token
-              OauthStorage.saveAccess(token);
+              // Save token
+              this.saveAccess(token);
               if (typeof params.callback === 'function') {
                 params.callback(OauthStorage.accessToken);
               }
             } else if (OauthUtils.assertAvailable(token.error)) {
               if (typeof params.callback === 'function') {
                 params.callback(false, token.errorDescription);
-                OauthStorage.clearAccess();
+                // Clear token
+                this.clearAccess();
                 getNewOauthToken();
               }
             } else {
               if (typeof params.callback === 'function') {
-                OauthStorage.clearAccess();
+                // Clear token
+                this.clearAccess();
                 params.callback(false);
               }
             }
@@ -652,17 +682,18 @@ export class Oauth {
   hasExpired() {
     return OauthUtils.hasTokenExpired(OauthStorage.accessToken);
   }
-  /**Oauth Authorization
-   * @param scope
-   * @param redirect_url
-   * @param user_id
-   * @param state
+  /**
+   * Oauth Authorization
+   * @param {string[]} scope
+   * @param {string} redirect_url
+   * @param {string} user_id
+   * @param {string} state
    * */
   oauthAuthorize(scope, redirect_url, user_id, state) {
     if (!OauthUtils.assertAvailable(redirect_url)) {
       throw new Error("'redirect_url' Required");
     }
-    OauthStorage.set(OauthStorage.currentStateKey, state, true);
+    OauthStorage.set(OauthStorageKeys.CurrentStateKey, state, true);
     const params = {
       client_id: this.clientId,
       scope: scope.join(' '),
@@ -675,17 +706,18 @@ export class Oauth {
     // Open authorization url
     window.open(url, '_blank');
   }
-  /**Oauth Authorization
-   * @param scope
-   * @param redirect_url
-   * @param email
-   * @param state
+  /**
+   * Oauth Authorization
+   * @param {string[]} scope
+   * @param {string} redirect_url
+   * @param {string} email
+   * @param {string} state
    * */
   oauthAuthorizeWithEmail(scope, redirect_url, email, state) {
     if (!OauthUtils.assertAvailable(redirect_url)) {
       throw new Error("'redirect_url' Required");
     }
-    OauthStorage.set(OauthStorage.currentStateKey, state, true);
+    OauthStorage.set(OauthStorageKeys.CurrentStateKey, state, true);
     const params = {
       client_id: this.clientId,
       scope: scope.join(' '),
@@ -698,11 +730,12 @@ export class Oauth {
     // Open authorization url
     window.open(url, '_blank');
   }
-  /**Oauth Authorization
-   * @param scope
-   * @param redirect_url
-   * @param user_id
-   * @param state
+  /**
+   * Oauth Authorization
+   * @param {string[]} scope
+   * @param {string} redirect_url
+   * @param {string} user_id
+   * @param {string} state
    * */
   oauthAuthorizeImplicit(scope, redirect_url, user_id, state) {
     if (!OauthUtils.assertAvailable(redirect_url)) {
@@ -711,7 +744,7 @@ export class Oauth {
     if (!OauthUtils.assertAvailable(scope)) {
       throw new Error("'scope' Required");
     }
-    OauthStorage.set(OauthStorage.currentStateKey, state, true);
+    OauthStorage.set(OauthStorageKeys.CurrentStateKey, state, true);
     const params = {
       client_id: this.clientId,
       scope: scope.join(' '),
@@ -724,9 +757,10 @@ export class Oauth {
     // Open authorization url
     window.open(url, '_blank');
   }
-  /**Get oauth token with Client credentials
-   * @param scope
-   * @param callback function
+  /**
+   * Get oauth token with Client credentials
+   * @param {string[]} scope
+   * @param {(verify: OauthTokenResponse, xhr: XMLHttpRequest)} callback
    * */
   oauthTokenWithClientCredentials(scope, callback) {
     OauthRequest.post({
@@ -738,7 +772,7 @@ export class Oauth {
         scope: scope.join(' '),
       },
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
       success: (xhr) => {
         const token = OauthResponse.parseTokenResponse(xhr.responseText);
@@ -747,7 +781,7 @@ export class Oauth {
         }
       },
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
       fail: (xhr) => {
         const token = OauthResponse.parseTokenResponse(xhr.responseText);
@@ -757,11 +791,12 @@ export class Oauth {
       },
     });
   }
-  /**Get oauth token with Client credentials
-   * @param username
-   * @param password
-   * @param scope
-   * @param callback function
+  /**
+   * Get oauth token with Client credentials
+   * @param {string} username
+   * @param {string} password
+   * @param {string[]} scope
+   * @param {(verify: OauthTokenResponse, xhr: XMLHttpRequest)} callback
    * */
   oauthTokenWithUserCredentials(username, password, scope, callback) {
     if (!OauthUtils.assertAvailable(username)) {
@@ -781,7 +816,7 @@ export class Oauth {
         scope: scope.join(' '),
       },
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
       success: (xhr) => {
         const token = OauthResponse.parseTokenResponse(xhr.responseText);
@@ -790,7 +825,7 @@ export class Oauth {
         }
       },
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
       fail: (xhr) => {
         const token = OauthResponse.parseTokenResponse(xhr.responseText);
@@ -801,9 +836,9 @@ export class Oauth {
     });
   }
   /**Get oauth token with Client credentials
-   * @param code String
-   * @param redirect_uri String
-   * @param callback function
+   * @param {string} code
+   * @param {string} redirect_uri
+   * @param {(verify: OauthTokenResponse, xhr: XMLHttpRequest)} callback
    * */
   oauthTokenWithAuthorizationCode(code, redirect_uri, callback) {
     OauthRequest.post({
@@ -816,7 +851,7 @@ export class Oauth {
         client_secret: this.clientSecret,
       },
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
       success: (xhr) => {
         const token = OauthResponse.parseTokenResponse(xhr.responseText);
@@ -825,7 +860,7 @@ export class Oauth {
         }
       },
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
       fail: (xhr) => {
         const token = OauthResponse.parseTokenResponse(xhr.responseText);
@@ -837,8 +872,8 @@ export class Oauth {
   }
   /**Get oauth Refresh Token with
    * Client credentials
-   * @param refreshToken string
-   * @param callback function
+   * @param {string} refreshToken
+   * @param {(verify: OauthTokenResponse, xhr: XMLHttpRequest)} callback
    * */
   oauthRefreshToken(refreshToken, callback) {
     OauthRequest.post({
@@ -850,7 +885,7 @@ export class Oauth {
         client_secret: this.clientSecret,
       },
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
       success: (xhr) => {
         const token = OauthResponse.parseTokenResponse(xhr.responseText);
@@ -859,7 +894,7 @@ export class Oauth {
         }
       },
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
       fail: (xhr) => {
         const token = OauthResponse.parseTokenResponse(xhr.responseText);
@@ -869,19 +904,18 @@ export class Oauth {
       },
     });
   }
-  /**Get oauth Refresh Token with
+  /**
+   * Get oauth Refresh Token with
    * Client credentials
    * @param accessToken string
    * @param callback function
    * */
   oauthVerifyToken(accessToken, callback) {
-    OauthRequest.post({
+    OauthRequest.get({
       url: this.verifyTokenUrl,
-      params: {
-        access_token: accessToken,
-      },
+      accessToken,
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
       success: (xhr) => {
         const verify = OauthResponse.parseVerificationResponse(
@@ -892,7 +926,7 @@ export class Oauth {
         }
       },
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
       fail: (xhr) => {
         const verify = OauthResponse.parseVerificationResponse(
@@ -924,214 +958,133 @@ export var OauthRequestMethod;
 })(OauthRequestMethod || (OauthRequestMethod = {}));
 /**Make Oauth Http requests*/
 export class OauthRequest {
-  constructor() {
+  /**
+   * @param {OauthRequestParams} data
+   * @param {OauthRequestMethod} method
+   * */
+  constructor(data, method = OauthRequestMethod.GET) {
+    this.data = data;
+    this.method = method;
     this.xhttp = new XMLHttpRequest();
   }
   /**Make GET Requests
-   * @param data Object
-   * @param data.username string - Auth username (optional)
-   * @param data.password string - Auth password (optional)
-   * @param data.withCredentials boolean - Use Credentials (username & password) default = false
-   * @param data.withAccessToken boolean - Use Access Token Header default = false
-   * @param data.url string - Request Url
-   * @param data.headers Object
-   * @param data.query Object
-   * @param data.params Object
-   * @param data.success(xhr,result)
-   * @param data.fail(xhr)
+   * @param {OauthRequestParams} data
    * */
   static get(data) {
-    const http = new OauthRequest();
-    http.username = data.username;
-    http.password = data.password;
-    http.withCredentials = data.withCredentials;
-    http.withAccessToken = data.withAccessToken;
-    http.method = OauthRequestMethod.GET;
-    http.url = data.url;
-    http.headers = data.headers;
-    http.query = data.query;
-    http.params = data.params;
-    http.success = data.success;
-    http.fail = data.fail;
+    const http = new OauthRequest(data, OauthRequestMethod.GET);
     http.request();
   }
   /**Make POST Requests
-   * @param data object
-   * @param data.username string - Auth username (optional)
-   * @param data.password string - Auth password (optional)
-   * @param data.withCredentials boolean - Use Credentials (username & password) default = false
-   * @param data.withAccessToken boolean - Use Access Token Header default = false
-   * @param data.url string - Request Url
-   * @param data.headers Object
-   * @param data.query Object
-   * @param data.params Object
-   * @param data.success(xhr,result)
-   * @param data.fail(xhr)
+   * @param {OauthRequestParams} data
    * */
   static post(data) {
-    const http = new OauthRequest();
-    http.username = data.username;
-    http.password = data.password;
-    http.withCredentials = data.withCredentials;
-    http.withAccessToken = data.withAccessToken;
-    http.method = OauthRequestMethod.POST;
-    http.url = data.url;
-    http.headers = data.headers;
-    http.query = data.query;
-    http.params = data.params;
-    http.success = data.success;
-    http.fail = data.fail;
+    const http = new OauthRequest(data, OauthRequestMethod.POST);
     http.request();
   }
   /**Make PUT Requests
-   * @param data object
-   * @param data.username string - Auth username (optional)
-   * @param data.password string - Auth password (optional)
-   * @param data.withCredentials boolean - Use Credentials (username & password) default = false
-   * @param data.withAccessToken boolean - Use Access Token Header default = false
-   * @param data.url string - Request Url
-   * @param data.headers Object
-   * @param data.query Object
-   * @param data.params Object
-   * @param data.success(xhr,result)
-   * @param data.fail(xhr)
+   * @param {OauthRequestParams} data
    * */
   static put(data) {
-    const http = new OauthRequest();
-    http.username = data.username;
-    http.password = data.password;
-    http.withCredentials = data.withCredentials;
-    http.withAccessToken = data.withAccessToken;
-    http.method = OauthRequestMethod.PUT;
-    http.url = data.url;
-    http.headers = data.headers;
-    http.query = data.query;
-    http.params = data.params;
-    http.success = data.success;
-    http.fail = data.fail;
+    const http = new OauthRequest(data, OauthRequestMethod.PUT);
     http.request();
   }
   /**Make DELETE Requests
-   * @param data object
-   * @param data.username string - Auth username (optional)
-   * @param data.password string - Auth password (optional)
-   * @param data.withCredentials boolean - Use Credentials (username & password) default = false
-   * @param data.withAccessToken boolean - Use Access Token Header default = false
-   * @param data.url string - Request Url
-   * @param data.headers Object
-   * @param data.query Object
-   * @param data.params Object
-   * @param data.success(xhr,result)
-   * @param data.fail(xhr)
+   * @param {OauthRequestParams} data
    * */
   static delete(data) {
-    const http = new OauthRequest();
-    http.username = data.username;
-    http.password = data.password;
-    http.withCredentials = data.withCredentials;
-    http.withAccessToken = data.withAccessToken;
-    http.method = OauthRequestMethod.DELETE;
-    http.url = data.url;
-    http.headers = data.headers;
-    http.query = data.query;
-    http.params = data.params;
-    http.success = data.success;
-    http.fail = data.fail;
+    const http = new OauthRequest(data, OauthRequestMethod.DELETE);
     http.request();
   }
   /**Make Http requests*/
   request() {
-    if (this.username == null || typeof this.username === 'undefined') {
-      this.username = '';
+    if (!OauthUtils.assertAvailable(this.data.username)) {
+      this.data.username = '';
     }
-    if (this.password == null || typeof this.password === 'undefined') {
-      this.password = '';
+    if (!OauthUtils.assertAvailable(this.data.password)) {
+      this.data.password = '';
     }
-    if (
-      this.withCredentials == null ||
-      typeof this.withCredentials === 'undefined'
-    ) {
-      this.withCredentials = false;
+    if (!OauthUtils.assertAvailable(this.data.withCredentials)) {
+      this.data.withCredentials = false;
     }
-    if (
-      this.withAccessToken == null ||
-      typeof this.withAccessToken === 'undefined'
-    ) {
-      this.withAccessToken = false;
+    if (!OauthUtils.assertAvailable(this.data.withAccessToken)) {
+      this.data.withAccessToken = false;
     }
     // If Queries available
-    if (OauthUtils.assertAvailable(this.query)) {
-      if (this.url.match(/('?')/) == null) {
-        this.url += `?${OauthUtils.urlEncodeObject(this.query)}`;
+    if (OauthUtils.assertAvailable(this.data.query)) {
+      if (this.data.url.match(/('?')/) == null) {
+        this.data.url += `?${OauthUtils.urlEncodeObject(this.data.query)}`;
       } else {
-        this.url += `&${OauthUtils.urlEncodeObject(this.query)}`;
+        this.data.url += `&${OauthUtils.urlEncodeObject(this.data.query)}`;
       }
     }
     // If GET Request
     if (this.method === OauthRequestMethod.GET) {
-      if (OauthUtils.assertAvailable(this.params)) {
-        if (this.url.match(/('?')/) == null) {
-          this.url += `?${OauthUtils.urlEncodeObject(this.params)}`;
+      if (OauthUtils.assertAvailable(this.data.params)) {
+        if (this.data.url.match(/('?')/) == null) {
+          this.data.url += `?${OauthUtils.urlEncodeObject(this.data.params)}`;
         } else {
-          this.url += `&${OauthUtils.urlEncodeObject(this.params)}`;
+          this.data.url += `&${OauthUtils.urlEncodeObject(this.data.params)}`;
         }
       }
     }
-    this.xhttp.withCredentials = this.withCredentials;
-    this.xhttp.open(this.method.toString().toLowerCase(), this.url);
+    this.xhttp.withCredentials = this.data.withCredentials;
+    this.xhttp.open(this.method.toString().toLowerCase(), this.data.url);
     // Get response
     this.xhttp.onreadystatechange = () => {
       if (this.xhttp.readyState === this.xhttp.DONE) {
         if (this.xhttp.status === 200) {
-          if (typeof this.success === 'function') {
-            this.success(this.xhttp, this.xhttp.responseText);
+          if (this.data.success && typeof this.data.success === 'function') {
+            this.data.success(this.xhttp, this.xhttp.responseText);
           }
         } else {
-          if (typeof this.fail === 'function') {
-            this.fail(this.xhttp);
+          if (this.data.fail && typeof this.data.fail === 'function') {
+            this.data.fail(this.xhttp);
           }
         }
       }
     };
     // Add headers
-    if (this.headers !== null && typeof this.headers === 'object') {
-      for (const key in this.headers) {
-        if (this.headers.hasOwnProperty(key)) {
+    if (this.data.headers !== null && typeof this.data.headers === 'object') {
+      for (const key in this.data.headers) {
+        if (this.data.headers.hasOwnProperty(key)) {
           if (
-            this.headers[key] !== null &&
-            typeof this.headers[key] !== 'undefined'
+            this.data.headers[key] !== null &&
+            typeof this.data.headers[key] !== 'undefined'
           ) {
-            this.xhttp.setRequestHeader(key, this.headers[key]);
+            this.xhttp.setRequestHeader(key, this.data.headers[key]);
           }
         }
       }
     }
     // Add Basic Credentials if requested
-    if (this.withCredentials) {
+    if (this.data.withCredentials) {
       this.xhttp.setRequestHeader(
         'Authorization',
-        'Basic ' + btoa(this.username + ':' + this.password)
+        'Basic ' +
+          Buffer.from(this.data.username + ':' + this.data.password).toString(
+            'base64'
+          )
       );
     }
     // Add Access Token if requested
-    if (this.withAccessToken) {
+    if (this.data.withAccessToken) {
       this.xhttp.setRequestHeader(
         'Authorization',
-        OauthStorage.tokenType + ' ' + OauthStorage.accessToken
+        (this.data.accessTokenType || 'Bearer') + ' ' + this.data.accessToken
       );
     }
     // Send Request
     if (this.method === OauthRequestMethod.GET) {
       this.xhttp.send();
     } else {
-      if (this.params instanceof FormData) {
-        this.xhttp.send(this.params);
+      if (this.data.params instanceof FormData) {
+        this.xhttp.send(this.data.params);
       } else {
         this.xhttp.setRequestHeader(
           'Content-Type',
           'application/x-www-form-urlencoded'
         );
-        const data = OauthUtils.urlEncodeObject(this.params);
+        const data = OauthUtils.urlEncodeObject(this.data.params);
         this.xhttp.send(data);
       }
     }

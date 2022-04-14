@@ -1,51 +1,32 @@
+export var OauthStorageKeys;
+(function (e) {
+  e['AccessTokenKey'] = 'access_token';
+  e['RefreshTokenKey'] = 'refresh_token';
+  e['AccessScopeKey'] = 'scope';
+  e['TokenTypeKey'] = 'token_type';
+  e['ExpiresInKey'] = 'expires_in';
+  e['CurrentStateKey'] = 'current_state';
+})(OauthStorageKeys || (OauthStorageKeys = {}));
 export class OauthStorage {
-  static get accessTokenKey() {
-    return 'access_token';
+  get(t) {
+    return new Promise((e) => {
+      e(OauthStorage.get(t));
+    });
   }
-  static get refreshTokenKey() {
-    return 'refresh_token';
+  set(t, s) {
+    return new Promise((e) => {
+      e(OauthStorage.set(t, s));
+    });
   }
-  static get accessScopeKey() {
-    return 'scope';
+  remove(t) {
+    return new Promise((e) => {
+      e(OauthStorage.remove(t));
+    });
   }
-  static get tokenTypeKey() {
-    return 'token_type';
-  }
-  static get expiresInKey() {
-    return 'expires_in';
-  }
-  static get currentStateKey() {
-    return 'current_state';
-  }
-  static saveAccess(e) {
-    OauthStorage.set(
-      OauthStorage.accessTokenKey,
-      OauthUtils.safeString(e.accessToken)
-    );
-    OauthStorage.set(
-      OauthStorage.refreshTokenKey,
-      OauthUtils.safeString(e.refreshToken)
-    );
-    OauthStorage.set(
-      OauthStorage.accessScopeKey,
-      OauthUtils.safeString(e.accessScope)
-    );
-    OauthStorage.set(
-      OauthStorage.tokenTypeKey,
-      OauthUtils.safeString(e.tokenType)
-    );
-    OauthStorage.set(
-      OauthStorage.expiresInKey,
-      OauthUtils.safeInt(Math.floor(Date.now() / 1e3) + e.expiresIn)
-    );
-  }
-  static clearAccess() {
-    OauthStorage.remove(OauthStorage.accessTokenKey);
-    OauthStorage.remove(OauthStorage.refreshTokenKey);
-    OauthStorage.remove(OauthStorage.accessScopeKey);
-    OauthStorage.remove(OauthStorage.tokenTypeKey);
-    OauthStorage.remove(OauthStorage.expiresInKey);
-    OauthStorage.remove(OauthStorage.currentStateKey);
+  clearAll() {
+    return new Promise((e) => {
+      e(OauthStorage.clearAll());
+    });
   }
   static set(e, t, s = false) {
     if (s) {
@@ -90,22 +71,22 @@ export class OauthStorage {
     }
   }
   static set accessToken(e) {
-    OauthStorage.set(OauthStorage.accessTokenKey, e);
+    OauthStorage.set(OauthStorageKeys.AccessTokenKey, e);
   }
   static get accessToken() {
-    return OauthStorage.get(OauthStorage.accessTokenKey);
+    return OauthStorage.get(OauthStorageKeys.AccessTokenKey);
   }
   static get refreshToken() {
-    return OauthStorage.get(OauthStorage.refreshTokenKey);
+    return OauthStorage.get(OauthStorageKeys.RefreshTokenKey);
   }
   static get accessScope() {
-    return OauthStorage.get(OauthStorage.accessScopeKey);
+    return OauthStorage.get(OauthStorageKeys.AccessScopeKey);
   }
   static get expiresIn() {
-    return OauthStorage.get(OauthStorage.expiresInKey);
+    return OauthStorage.get(OauthStorageKeys.ExpiresInKey);
   }
   static get tokenType() {
-    return OauthStorage.get(OauthStorage.tokenTypeKey);
+    return OauthStorage.get(OauthStorageKeys.TokenTypeKey);
   }
 }
 export class OauthUtils {
@@ -276,6 +257,41 @@ export class Oauth {
     } else {
       throw new Error("'verifyTokenUrl' Required");
     }
+    if (OauthUtils.assertAvailable(e.storage)) {
+      this.storage = e.storage;
+    } else {
+      this.storage = new OauthStorage();
+    }
+  }
+  saveAccess(e) {
+    this.storage.set(
+      OauthStorageKeys.AccessTokenKey,
+      OauthUtils.safeString(e.accessToken)
+    );
+    this.storage.set(
+      OauthStorageKeys.RefreshTokenKey,
+      OauthUtils.safeString(e.refreshToken)
+    );
+    this.storage.set(
+      OauthStorageKeys.AccessScopeKey,
+      OauthUtils.safeString(e.accessScope)
+    );
+    this.storage.set(
+      OauthStorageKeys.TokenTypeKey,
+      OauthUtils.safeString(e.tokenType)
+    );
+    this.storage.set(
+      OauthStorageKeys.ExpiresInKey,
+      String(OauthUtils.safeInt(Math.floor(Date.now() / 1e3) + e.expiresIn))
+    );
+  }
+  clearAccess() {
+    this.storage.remove(OauthStorageKeys.AccessTokenKey);
+    this.storage.remove(OauthStorageKeys.RefreshTokenKey);
+    this.storage.remove(OauthStorageKeys.AccessScopeKey);
+    this.storage.remove(OauthStorageKeys.TokenTypeKey);
+    this.storage.remove(OauthStorageKeys.ExpiresInKey);
+    this.storage.remove(OauthStorageKeys.CurrentStateKey);
   }
   authorizeAccess(r) {
     let i = OauthUtils.assertAvailable(r.grant_type)
@@ -284,10 +300,10 @@ export class Oauth {
     const o = OauthUtils.assertAvailable(r.allowed_grant_types)
       ? r.allowed_grant_types
       : [];
-    const n = OauthUtils.assertAvailable(r.redirect_uri)
+    const l = OauthUtils.assertAvailable(r.redirect_uri)
       ? r.redirect_uri
       : OauthUtils.stripUrlParams(location.origin);
-    const l = OauthUtils.assertAvailable(r.scope) ? r.scope : [];
+    const n = OauthUtils.assertAvailable(r.scope) ? r.scope : [];
     let c = OauthUtils.assertAvailable(r.state)
       ? r.state
       : OauthUtils.generateKey(32);
@@ -328,14 +344,14 @@ export class Oauth {
           const t = OauthUtils.getUrlParam('error');
           const s = OauthUtils.getUrlParam('error_description');
           if (OauthUtils.assertAvailable(e)) {
-            const a = OauthStorage.get(OauthStorage.currentStateKey);
+            const a = OauthStorage.get(OauthStorageKeys.CurrentStateKey);
             c = OauthUtils.assertAvailable(a) ? a : c;
             if (c === OauthUtils.getUrlParam('state')) {
-              this.oauthTokenWithAuthorizationCode(e, n, (e, t) => {
+              this.oauthTokenWithAuthorizationCode(e, l, (e, t) => {
                 if (OauthUtils.assertAvailable(e)) {
                   if (OauthUtils.assertAvailable(e.accessToken)) {
-                    OauthStorage.remove(OauthStorage.currentStateKey);
-                    OauthStorage.saveAccess(e);
+                    OauthStorage.remove(OauthStorageKeys.CurrentStateKey);
+                    this.saveAccess(e);
                     if (typeof r.callback === 'function') {
                       r.callback(OauthStorage.accessToken);
                     }
@@ -366,7 +382,7 @@ export class Oauth {
               }
             }
           } else if (OauthUtils.assertAvailable(t)) {
-            OauthStorage.remove(OauthStorage.currentStateKey);
+            OauthStorage.remove(OauthStorageKeys.CurrentStateKey);
             if (OauthUtils.assertAvailable(s)) {
               if (typeof r.callback === 'function') {
                 r.callback(false, s);
@@ -377,18 +393,18 @@ export class Oauth {
               }
             }
           } else {
-            this.oauthAuthorize(l, n, r.user_id, c);
+            this.oauthAuthorize(n, l, r.user_id, c);
           }
           break;
         case OauthGrantType.User_Credentials:
           this.oauthTokenWithUserCredentials(
             r.username,
             r.password,
-            l,
+            n,
             (e, t) => {
               if (OauthUtils.assertAvailable(e)) {
                 if (OauthUtils.assertAvailable(e.accessToken)) {
-                  OauthStorage.saveAccess(e);
+                  this.saveAccess(e);
                   if (typeof r.callback === 'function') {
                     r.callback(OauthStorage.accessToken);
                   }
@@ -411,10 +427,10 @@ export class Oauth {
           break;
         case OauthGrantType.Client_Credentials:
         default:
-          this.oauthTokenWithClientCredentials(l, (e, t) => {
+          this.oauthTokenWithClientCredentials(n, (e, t) => {
             if (OauthUtils.assertAvailable(e)) {
               if (OauthUtils.assertAvailable(e.accessToken)) {
-                OauthStorage.saveAccess(e);
+                this.saveAccess(e);
                 if (typeof r.callback === 'function') {
                   r.callback(OauthStorage.accessToken);
                 }
@@ -440,19 +456,19 @@ export class Oauth {
       this.oauthRefreshToken(e, (e, t) => {
         if (OauthUtils.assertAvailable(e)) {
           if (OauthUtils.assertAvailable(e.accessToken)) {
-            OauthStorage.saveAccess(e);
+            this.saveAccess(e);
             if (typeof r.callback === 'function') {
               r.callback(OauthStorage.accessToken);
             }
           } else if (OauthUtils.assertAvailable(e.error)) {
             if (typeof r.callback === 'function') {
               r.callback(false, e.errorDescription);
-              OauthStorage.clearAccess();
+              this.clearAccess();
               u();
             }
           } else {
             if (typeof r.callback === 'function') {
-              OauthStorage.clearAccess();
+              this.clearAccess();
               r.callback(false);
             }
           }
@@ -501,7 +517,7 @@ export class Oauth {
     if (!OauthUtils.assertAvailable(t)) {
       throw new Error("'redirect_url' Required");
     }
-    OauthStorage.set(OauthStorage.currentStateKey, a, true);
+    OauthStorage.set(OauthStorageKeys.CurrentStateKey, a, true);
     const r = {
       client_id: this.clientId,
       scope: e.join(' '),
@@ -517,7 +533,7 @@ export class Oauth {
     if (!OauthUtils.assertAvailable(t)) {
       throw new Error("'redirect_url' Required");
     }
-    OauthStorage.set(OauthStorage.currentStateKey, a, true);
+    OauthStorage.set(OauthStorageKeys.CurrentStateKey, a, true);
     const r = {
       client_id: this.clientId,
       scope: e.join(' '),
@@ -536,7 +552,7 @@ export class Oauth {
     if (!OauthUtils.assertAvailable(e)) {
       throw new Error("'scope' Required");
     }
-    OauthStorage.set(OauthStorage.currentStateKey, a, true);
+    OauthStorage.set(OauthStorageKeys.CurrentStateKey, a, true);
     const r = {
       client_id: this.clientId,
       scope: e.join(' '),
@@ -650,9 +666,9 @@ export class Oauth {
     });
   }
   oauthVerifyToken(e, s) {
-    OauthRequest.post({
+    OauthRequest.get({
       url: this.verifyTokenUrl,
-      params: { access_token: e },
+      accessToken: e,
       success: (e) => {
         const t = OauthResponse.parseVerificationResponse(e.responseText);
         if (typeof s === 'function') {
@@ -684,154 +700,109 @@ export var OauthRequestMethod;
   e['DELETE'] = 'delete';
 })(OauthRequestMethod || (OauthRequestMethod = {}));
 export class OauthRequest {
-  constructor() {
+  constructor(e, t = OauthRequestMethod.GET) {
+    this.data = e;
+    this.method = t;
     this.xhttp = new XMLHttpRequest();
   }
   static get(e) {
-    const t = new OauthRequest();
-    t.username = e.username;
-    t.password = e.password;
-    t.withCredentials = e.withCredentials;
-    t.withAccessToken = e.withAccessToken;
-    t.method = OauthRequestMethod.GET;
-    t.url = e.url;
-    t.headers = e.headers;
-    t.query = e.query;
-    t.params = e.params;
-    t.success = e.success;
-    t.fail = e.fail;
+    const t = new OauthRequest(e, OauthRequestMethod.GET);
     t.request();
   }
   static post(e) {
-    const t = new OauthRequest();
-    t.username = e.username;
-    t.password = e.password;
-    t.withCredentials = e.withCredentials;
-    t.withAccessToken = e.withAccessToken;
-    t.method = OauthRequestMethod.POST;
-    t.url = e.url;
-    t.headers = e.headers;
-    t.query = e.query;
-    t.params = e.params;
-    t.success = e.success;
-    t.fail = e.fail;
+    const t = new OauthRequest(e, OauthRequestMethod.POST);
     t.request();
   }
   static put(e) {
-    const t = new OauthRequest();
-    t.username = e.username;
-    t.password = e.password;
-    t.withCredentials = e.withCredentials;
-    t.withAccessToken = e.withAccessToken;
-    t.method = OauthRequestMethod.PUT;
-    t.url = e.url;
-    t.headers = e.headers;
-    t.query = e.query;
-    t.params = e.params;
-    t.success = e.success;
-    t.fail = e.fail;
+    const t = new OauthRequest(e, OauthRequestMethod.PUT);
     t.request();
   }
   static delete(e) {
-    const t = new OauthRequest();
-    t.username = e.username;
-    t.password = e.password;
-    t.withCredentials = e.withCredentials;
-    t.withAccessToken = e.withAccessToken;
-    t.method = OauthRequestMethod.DELETE;
-    t.url = e.url;
-    t.headers = e.headers;
-    t.query = e.query;
-    t.params = e.params;
-    t.success = e.success;
-    t.fail = e.fail;
+    const t = new OauthRequest(e, OauthRequestMethod.DELETE);
     t.request();
   }
   request() {
-    if (this.username == null || typeof this.username === 'undefined') {
-      this.username = '';
+    if (!OauthUtils.assertAvailable(this.data.username)) {
+      this.data.username = '';
     }
-    if (this.password == null || typeof this.password === 'undefined') {
-      this.password = '';
+    if (!OauthUtils.assertAvailable(this.data.password)) {
+      this.data.password = '';
     }
-    if (
-      this.withCredentials == null ||
-      typeof this.withCredentials === 'undefined'
-    ) {
-      this.withCredentials = false;
+    if (!OauthUtils.assertAvailable(this.data.withCredentials)) {
+      this.data.withCredentials = false;
     }
-    if (
-      this.withAccessToken == null ||
-      typeof this.withAccessToken === 'undefined'
-    ) {
-      this.withAccessToken = false;
+    if (!OauthUtils.assertAvailable(this.data.withAccessToken)) {
+      this.data.withAccessToken = false;
     }
-    if (OauthUtils.assertAvailable(this.query)) {
-      if (this.url.match(/('?')/) == null) {
-        this.url += `?${OauthUtils.urlEncodeObject(this.query)}`;
+    if (OauthUtils.assertAvailable(this.data.query)) {
+      if (this.data.url.match(/('?')/) == null) {
+        this.data.url += `?${OauthUtils.urlEncodeObject(this.data.query)}`;
       } else {
-        this.url += `&${OauthUtils.urlEncodeObject(this.query)}`;
+        this.data.url += `&${OauthUtils.urlEncodeObject(this.data.query)}`;
       }
     }
     if (this.method === OauthRequestMethod.GET) {
-      if (OauthUtils.assertAvailable(this.params)) {
-        if (this.url.match(/('?')/) == null) {
-          this.url += `?${OauthUtils.urlEncodeObject(this.params)}`;
+      if (OauthUtils.assertAvailable(this.data.params)) {
+        if (this.data.url.match(/('?')/) == null) {
+          this.data.url += `?${OauthUtils.urlEncodeObject(this.data.params)}`;
         } else {
-          this.url += `&${OauthUtils.urlEncodeObject(this.params)}`;
+          this.data.url += `&${OauthUtils.urlEncodeObject(this.data.params)}`;
         }
       }
     }
-    this.xhttp.withCredentials = this.withCredentials;
-    this.xhttp.open(this.method.toString().toLowerCase(), this.url);
+    this.xhttp.withCredentials = this.data.withCredentials;
+    this.xhttp.open(this.method.toString().toLowerCase(), this.data.url);
     this.xhttp.onreadystatechange = () => {
       if (this.xhttp.readyState === this.xhttp.DONE) {
         if (this.xhttp.status === 200) {
-          if (typeof this.success === 'function') {
-            this.success(this.xhttp, this.xhttp.responseText);
+          if (this.data.success && typeof this.data.success === 'function') {
+            this.data.success(this.xhttp, this.xhttp.responseText);
           }
         } else {
-          if (typeof this.fail === 'function') {
-            this.fail(this.xhttp);
+          if (this.data.fail && typeof this.data.fail === 'function') {
+            this.data.fail(this.xhttp);
           }
         }
       }
     };
-    if (this.headers !== null && typeof this.headers === 'object') {
-      for (const e in this.headers) {
-        if (this.headers.hasOwnProperty(e)) {
+    if (this.data.headers !== null && typeof this.data.headers === 'object') {
+      for (const e in this.data.headers) {
+        if (this.data.headers.hasOwnProperty(e)) {
           if (
-            this.headers[e] !== null &&
-            typeof this.headers[e] !== 'undefined'
+            this.data.headers[e] !== null &&
+            typeof this.data.headers[e] !== 'undefined'
           ) {
-            this.xhttp.setRequestHeader(e, this.headers[e]);
+            this.xhttp.setRequestHeader(e, this.data.headers[e]);
           }
         }
       }
     }
-    if (this.withCredentials) {
+    if (this.data.withCredentials) {
       this.xhttp.setRequestHeader(
         'Authorization',
-        'Basic ' + btoa(this.username + ':' + this.password)
+        'Basic ' +
+          Buffer.from(this.data.username + ':' + this.data.password).toString(
+            'base64'
+          )
       );
     }
-    if (this.withAccessToken) {
+    if (this.data.withAccessToken) {
       this.xhttp.setRequestHeader(
         'Authorization',
-        OauthStorage.tokenType + ' ' + OauthStorage.accessToken
+        (this.data.accessTokenType || 'Bearer') + ' ' + this.data.accessToken
       );
     }
     if (this.method === OauthRequestMethod.GET) {
       this.xhttp.send();
     } else {
-      if (this.params instanceof FormData) {
-        this.xhttp.send(this.params);
+      if (this.data.params instanceof FormData) {
+        this.xhttp.send(this.data.params);
       } else {
         this.xhttp.setRequestHeader(
           'Content-Type',
           'application/x-www-form-urlencoded'
         );
-        const t = OauthUtils.urlEncodeObject(this.params);
+        const t = OauthUtils.urlEncodeObject(this.data.params);
         this.xhttp.send(t);
       }
     }

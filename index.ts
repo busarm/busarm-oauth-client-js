@@ -1,62 +1,40 @@
 /**Store and Retrieve Oauth variables*/
-export class OauthStorage {
-  static get accessTokenKey() {
-    return 'access_token';
-  }
+export interface OauthStorageInterface<T> {
+  get(key: string): Promise<T>;
+  set(key: string, value: T): Promise<void>;
+  remove(key: string): Promise<void>;
+  clearAll(): Promise<void>;
+}
 
-  static get refreshTokenKey() {
-    return 'refresh_token';
-  }
+export enum OauthStorageKeys {
+  AccessTokenKey = "access_token",
+  RefreshTokenKey = "refresh_token",
+  AccessScopeKey = "scope",
+  TokenTypeKey = "token_type",
+  ExpiresInKey = "expires_in",
+  CurrentStateKey = "current_state",
+}
 
-  static get accessScopeKey() {
-    return 'scope';
+export class OauthStorage implements OauthStorageInterface<string> {
+  get(key: string): Promise<string> {
+    return new Promise((resolve) => {
+      resolve(OauthStorage.get(key));
+    });
   }
-
-  static get tokenTypeKey() {
-    return 'token_type';
+  set(key: string, value: string): Promise<void> {
+    return new Promise((resolve) => {
+      resolve(OauthStorage.set(key, value));
+    });
   }
-
-  static get expiresInKey() {
-    return 'expires_in';
+  remove(key: string): Promise<any> {
+    return new Promise((resolve) => {
+      resolve(OauthStorage.remove(key));
+    });
   }
-
-  static get currentStateKey() {
-    return 'current_state';
-  }
-
-  /**Save Access data to Local storage
-   * @param accessData OauthTokenResponse */
-  static saveAccess(accessData: OauthTokenResponse) {
-    OauthStorage.set(
-      OauthStorage.accessTokenKey,
-      OauthUtils.safeString(accessData.accessToken)
-    );
-    OauthStorage.set(
-      OauthStorage.refreshTokenKey,
-      OauthUtils.safeString(accessData.refreshToken)
-    );
-    OauthStorage.set(
-      OauthStorage.accessScopeKey,
-      OauthUtils.safeString(accessData.accessScope)
-    );
-    OauthStorage.set(
-      OauthStorage.tokenTypeKey,
-      OauthUtils.safeString(accessData.tokenType)
-    );
-    OauthStorage.set(
-      OauthStorage.expiresInKey,
-      OauthUtils.safeInt(Math.floor(Date.now() / 1000) + accessData.expiresIn)
-    );
-  }
-
-  /**Clear all access data from session*/
-  static clearAccess() {
-    OauthStorage.remove(OauthStorage.accessTokenKey);
-    OauthStorage.remove(OauthStorage.refreshTokenKey);
-    OauthStorage.remove(OauthStorage.accessScopeKey);
-    OauthStorage.remove(OauthStorage.tokenTypeKey);
-    OauthStorage.remove(OauthStorage.expiresInKey);
-    OauthStorage.remove(OauthStorage.currentStateKey);
+  clearAll(): Promise<any> {
+    return new Promise((resolve) => {
+      resolve(OauthStorage.clearAll());
+    });
   }
 
   /** Set data - localstorage
@@ -65,11 +43,11 @@ export class OauthStorage {
    * */
   static set(name: string, value: any, temporary = false) {
     if (temporary) {
-      if (typeof sessionStorage !== 'undefined') {
+      if (typeof sessionStorage !== "undefined") {
         sessionStorage.setItem(name, value);
       }
     } else {
-      if (typeof localStorage !== 'undefined') {
+      if (typeof localStorage !== "undefined") {
         localStorage.setItem(name, value);
       }
     }
@@ -79,13 +57,13 @@ export class OauthStorage {
    * @param name  name
    * */
   static get(name: string) {
-    if (typeof sessionStorage !== 'undefined') {
+    if (typeof sessionStorage !== "undefined") {
       let data = sessionStorage.getItem(name);
       if (OauthUtils.assertAvailable(data)) {
         return data;
       }
     }
-    if (typeof localStorage !== 'undefined') {
+    if (typeof localStorage !== "undefined") {
       let data = localStorage.getItem(name);
       if (OauthUtils.assertAvailable(data)) {
         return data;
@@ -98,20 +76,20 @@ export class OauthStorage {
    * @param name  string
    * */
   static remove(name: string) {
-    if (typeof localStorage !== 'undefined') {
+    if (typeof localStorage !== "undefined") {
       localStorage.removeItem(name);
     }
-    if (typeof sessionStorage !== 'undefined') {
+    if (typeof sessionStorage !== "undefined") {
       sessionStorage.removeItem(name);
     }
   }
 
   /**Clear all user data*/
   static clearAll(withTemp = false) {
-    if (typeof localStorage !== 'undefined') {
+    if (typeof localStorage !== "undefined") {
       localStorage.clear();
     }
-    if (withTemp && typeof sessionStorage !== 'undefined') {
+    if (withTemp && typeof sessionStorage !== "undefined") {
       sessionStorage.clear();
     }
   }
@@ -120,41 +98,41 @@ export class OauthStorage {
    * @param accessToken String
    * */
   static set accessToken(accessToken) {
-    OauthStorage.set(OauthStorage.accessTokenKey, accessToken);
+    OauthStorage.set(OauthStorageKeys.AccessTokenKey, accessToken);
   }
 
   /**Get Access Token
    * @return String
    * */
   static get accessToken() {
-    return OauthStorage.get(OauthStorage.accessTokenKey);
+    return OauthStorage.get(OauthStorageKeys.AccessTokenKey);
   }
   /**Get Refresh Token
    * @return String
    * */
   static get refreshToken() {
-    return OauthStorage.get(OauthStorage.refreshTokenKey);
+    return OauthStorage.get(OauthStorageKeys.RefreshTokenKey);
   }
 
   /**Get Access Scope
    * @return String
    * */
   static get accessScope() {
-    return OauthStorage.get(OauthStorage.accessScopeKey);
+    return OauthStorage.get(OauthStorageKeys.AccessScopeKey);
   }
 
   /**Get Expires In
    * @return string
    * */
   static get expiresIn() {
-    return OauthStorage.get(OauthStorage.expiresInKey);
+    return OauthStorage.get(OauthStorageKeys.ExpiresInKey);
   }
 
   /**Get Token Type
    * @return String
    * */
   static get tokenType() {
-    return OauthStorage.get(OauthStorage.tokenTypeKey);
+    return OauthStorage.get(OauthStorageKeys.TokenTypeKey);
   }
 }
 
@@ -164,7 +142,7 @@ export class OauthUtils {
    *  @return string
    * */
   static parseJWT(token: string) {
-    let split = token.split('.');
+    let split = token.split(".");
     return split && split.length == 3 ? atob(split[1]) : null;
   }
 
@@ -173,7 +151,7 @@ export class OauthUtils {
    * */
   static hasJWTExpired(token: string) {
     let data = this.parseJson(this.parseJWT(token));
-    let exp = data ? data['exp'] : null;
+    let exp = data ? data["exp"] : null;
     return exp ? parseInt(exp) < Math.floor(Date.now() / 1000) + 10 : true; // + 10 to account for any network latency
   }
 
@@ -202,7 +180,7 @@ export class OauthUtils {
     if (OauthUtils.assertAvailable(item)) {
       return item;
     }
-    return '';
+    return "";
   }
 
   /**Get a safe form of stIntring to store,
@@ -221,7 +199,7 @@ export class OauthUtils {
    * @param item
    *  @return boolean*/
   static assertAvailable(item: any) {
-    return item != null && typeof item !== 'undefined' && item !== '';
+    return item != null && typeof item !== "undefined" && item !== "";
   }
 
   /**Count Object array
@@ -261,19 +239,19 @@ export class OauthUtils {
         if (data[key].hasOwnProperty(subKey)) {
           if (
             data[key][subKey] !== null &&
-            typeof data[key][subKey] !== 'undefined'
+            typeof data[key][subKey] !== "undefined"
           ) {
             if (
-              typeof data[key][subKey] === 'object' ||
+              typeof data[key][subKey] === "object" ||
               Array.isArray(data[key][subKey])
             ) {
               // If object or array
-              const newParent = parent + '[' + subKey + ']';
+              const newParent = parent + "[" + subKey + "]";
               this.mergeObj(encoded, encodeObj(data[key], subKey, newParent));
             } else {
               encoded.push(
-                encodeURIComponent(parent + '[' + subKey + ']') +
-                  '=' +
+                encodeURIComponent(parent + "[" + subKey + "]") +
+                  "=" +
                   encodeURIComponent(data[key][subKey])
               );
             }
@@ -285,15 +263,15 @@ export class OauthUtils {
 
     const encodeData = (data: any) => {
       const encoded = [];
-      if (data !== null && typeof data === 'object') {
+      if (data !== null && typeof data === "object") {
         for (const key in data) {
           if (data.hasOwnProperty(key)) {
-            if (data[key] !== null && typeof data[key] !== 'undefined') {
-              if (typeof data[key] === 'object' || Array.isArray(data[key])) {
+            if (data[key] !== null && typeof data[key] !== "undefined") {
+              if (typeof data[key] === "object" || Array.isArray(data[key])) {
                 // If object or array
                 this.mergeObj(encoded, encodeObj(data, key, key));
               } else {
-                encoded.push(key + '=' + encodeURIComponent(data[key]));
+                encoded.push(key + "=" + encodeURIComponent(data[key]));
               }
             }
           }
@@ -304,9 +282,9 @@ export class OauthUtils {
 
     const out = encodeData(myData);
     if (out.length > 0) {
-      return out.join('&');
+      return out.join("&");
     } else {
-      return '';
+      return "";
     }
   }
 
@@ -330,8 +308,8 @@ export class OauthUtils {
       url = location.href;
     }
     url = decodeURIComponent(url);
-    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-    const regexS = '[\\?&]' + name + '=([^&#]*)';
+    name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+    const regexS = "[\\?&]" + name + "=([^&#]*)";
     const regex = new RegExp(regexS);
     const results = regex.exec(url);
     return results == null ? null : results[1];
@@ -343,7 +321,7 @@ export class OauthUtils {
    * */
   static stripUrlParams(url: string) {
     if (OauthUtils.assertAvailable(url)) {
-      return url.split('?')[0];
+      return url.split("?")[0];
     } else {
       return url;
     }
@@ -355,9 +333,9 @@ export class OauthUtils {
       length = 16;
     }
 
-    let text = '';
+    let text = "";
     const possible =
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     for (let i = 0; i < length; i++) {
       text += possible.charAt(Math.floor(Math.random() * possible.length));
     }
@@ -372,13 +350,16 @@ export class Oauth {
   private readonly authorizeUrl: string;
   private readonly tokenUrl: string;
   private readonly verifyTokenUrl: string;
+  private readonly storage: OauthStorageInterface<string>;
 
-  /**@param data object
-   * @param data.clientId - Your Application's Client ID
-   * @param data.clientSecret - Your Application's Client Secret
-   * @param data.authorizeUrl - Url to Authorize access (For authorization_code grant_type)
-   * @param data.tokenUrl - Url to obtain token
-   * @param data.verifyTokenUrl - Url to verify token
+  /**
+   * @param {object} data
+   * @param {string} data.clientId - Your Application's Client ID
+   * @param {string} data.clientSecret - Your Application's Client Secret
+   * @param {string} data.authorizeUrl - [GET] Url endpoint to authorize or request access
+   * @param {string} data.tokenUrl - Url endpoint to obtain token
+   * @param {string} data.verifyTokenUrl - [GET] Url endpoint to verify token
+   * @param {OauthStorageInterface<string>} data.storage - Handle custom storage - Default storage = browser localStorage or sessionStorage
    * */
   constructor(data: {
     clientId?: string;
@@ -386,6 +367,7 @@ export class Oauth {
     authorizeUrl?: string;
     tokenUrl?: string;
     verifyTokenUrl?: string;
+    storage?: OauthStorageInterface<string>;
   }) {
     if (OauthUtils.assertAvailable(data.clientId)) {
       this.clientId = data.clientId;
@@ -416,17 +398,63 @@ export class Oauth {
     } else {
       throw new Error("'verifyTokenUrl' Required");
     }
+
+    if (OauthUtils.assertAvailable(data.storage)) {
+      this.storage = data.storage;
+    } else {
+      this.storage = new OauthStorage();
+    }
   }
 
-  /**Authorize Access to the app
-   * @param params Object
-   * @param params.grant_type default -> client_credentials grantType
-   * @param params.allowed_grant_types grant_type(s) to ignore if OauthGrantType.Auto selected
-   * @param params.redirect_uri For authorization_code grant_type default -> current url
-   * @param params.user_id For authorization_code grant_type
-   * @param params.username For User_Credentials grant_type
-   * @param params.password For User_Credentials grant_type
-   * @param params.callback()
+  /**
+   * Save Access data to Local storage
+   * @param {OauthTokenResponse} accessData
+   * */
+  saveAccess(accessData: OauthTokenResponse) {
+    this.storage.set(
+      OauthStorageKeys.AccessTokenKey,
+      OauthUtils.safeString(accessData.accessToken)
+    );
+    this.storage.set(
+      OauthStorageKeys.RefreshTokenKey,
+      OauthUtils.safeString(accessData.refreshToken)
+    );
+    this.storage.set(
+      OauthStorageKeys.AccessScopeKey,
+      OauthUtils.safeString(accessData.accessScope)
+    );
+    this.storage.set(
+      OauthStorageKeys.TokenTypeKey,
+      OauthUtils.safeString(accessData.tokenType)
+    );
+    this.storage.set(
+      OauthStorageKeys.ExpiresInKey,
+      String(
+        OauthUtils.safeInt(Math.floor(Date.now() / 1000) + accessData.expiresIn)
+      )
+    );
+  }
+
+  /**Clear all access data from session*/
+  clearAccess() {
+    this.storage.remove(OauthStorageKeys.AccessTokenKey);
+    this.storage.remove(OauthStorageKeys.RefreshTokenKey);
+    this.storage.remove(OauthStorageKeys.AccessScopeKey);
+    this.storage.remove(OauthStorageKeys.TokenTypeKey);
+    this.storage.remove(OauthStorageKeys.ExpiresInKey);
+    this.storage.remove(OauthStorageKeys.CurrentStateKey);
+  }
+
+  /**
+   * Authorize Access to the app
+   * @param {object} params
+   * @param {OauthGrantType} params.grant_type Default - client_credentials grantType
+   * @param {OauthGrantType[]} params.allowed_grant_types grant_type(s) to ignore if {OauthGrantType.Auto} selected
+   * @param {string} params.redirect_uri For authorization_code grant_type default -> current url
+   * @param {string} params.user_id For authorization_code grant_type
+   * @param {string} params.username For password grant_type
+   * @param {string} params.password For password grant_type
+   * @param {(token: string | boolean, msg?: string)} params.callback
    * */
   authorizeAccess(params: {
     grant_type?: OauthGrantType;
@@ -466,7 +494,7 @@ export class Oauth {
         case OauthGrantType.Auto:
           if (
             OauthUtils.assertAvailable(params.user_id) ||
-            OauthUtils.assertAvailable(OauthUtils.getUrlParam('code'))
+            OauthUtils.assertAvailable(OauthUtils.getUrlParam("code"))
           ) {
             // if authorization code exists in url param
             grant_type = OauthGrantType.Authorization_Code;
@@ -495,31 +523,34 @@ export class Oauth {
           }
           break;
         case OauthGrantType.Authorization_Code:
-          const code = OauthUtils.getUrlParam('code');
-          const error = OauthUtils.getUrlParam('error');
-          const error_description = OauthUtils.getUrlParam('error_description');
+          const code = OauthUtils.getUrlParam("code");
+          const error = OauthUtils.getUrlParam("error");
+          const error_description = OauthUtils.getUrlParam("error_description");
           if (OauthUtils.assertAvailable(code)) {
-            const save_state = OauthStorage.get(OauthStorage.currentStateKey);
+            const save_state = OauthStorage.get(
+              OauthStorageKeys.CurrentStateKey
+            );
             state = OauthUtils.assertAvailable(save_state) ? save_state : state;
-            if (state === OauthUtils.getUrlParam('state')) {
+            if (state === OauthUtils.getUrlParam("state")) {
               // Get token
               this.oauthTokenWithAuthorizationCode(
                 code,
                 redirect_uri,
-                /**Ajax Response callback
-                 * @param token OauthTokenResponse
-                 * @param xhr XMLHttpRequest | ActiveXObject
+                /**
+                 * Ajax Response callback
+                 * @param {OauthTokenResponse} token
+                 * @param {XMLHttpRequest} xhr
                  * */
-                (token, xhr) => {
+                (token: OauthTokenResponse, xhr: XMLHttpRequest) => {
                   if (OauthUtils.assertAvailable(token)) {
                     if (OauthUtils.assertAvailable(token.accessToken)) {
                       // Remove instance ID
-                      OauthStorage.remove(OauthStorage.currentStateKey);
+                      OauthStorage.remove(OauthStorageKeys.CurrentStateKey);
 
-                      // save token
-                      OauthStorage.saveAccess(token);
+                      // Save token
+                      this.saveAccess(token);
 
-                      if (typeof params.callback === 'function') {
+                      if (typeof params.callback === "function") {
                         params.callback(OauthStorage.accessToken);
                       }
 
@@ -528,40 +559,40 @@ export class Oauth {
                         OauthUtils.stripUrlParams(window.location.href)
                       );
                     } else if (OauthUtils.assertAvailable(token.error)) {
-                      if (typeof params.callback === 'function') {
+                      if (typeof params.callback === "function") {
                         params.callback(false, token.errorDescription);
                       }
                     } else {
-                      if (typeof params.callback === 'function') {
+                      if (typeof params.callback === "function") {
                         params.callback(false);
                       }
                     }
                   } else {
-                    if (typeof params.callback === 'function') {
+                    if (typeof params.callback === "function") {
                       params.callback(false);
                     }
                   }
                 }
               );
             } else {
-              if (typeof params.callback === 'function') {
+              if (typeof params.callback === "function") {
                 params.callback(
                   false,
-                  'Failed authorize access. CSRF Verification Failed'
+                  "Failed authorize access. CSRF Verification Failed"
                 );
               }
             }
           } else if (OauthUtils.assertAvailable(error)) {
             // Remove oauth state
-            OauthStorage.remove(OauthStorage.currentStateKey);
+            OauthStorage.remove(OauthStorageKeys.CurrentStateKey);
 
             if (OauthUtils.assertAvailable(error_description)) {
-              if (typeof params.callback === 'function') {
+              if (typeof params.callback === "function") {
                 params.callback(false, error_description);
               }
             } else {
-              if (typeof params.callback === 'function') {
-                params.callback(false, 'Failed authorize access');
+              if (typeof params.callback === "function") {
+                params.callback(false, "Failed authorize access");
               }
             }
           } else {
@@ -575,30 +606,31 @@ export class Oauth {
             params.username,
             params.password,
             scope,
-            /**Ajax Response callback
-             * @param token OauthTokenResponse
-             * @param xhr XMLHttpRequest | ActiveXObject
+            /**
+             * Ajax Response callback
+             * @param {OauthTokenResponse} token
+             * @param {XMLHttpRequest} xhr
              * */
-            (token, xhr) => {
+            (token: OauthTokenResponse, xhr: XMLHttpRequest) => {
               if (OauthUtils.assertAvailable(token)) {
                 if (OauthUtils.assertAvailable(token.accessToken)) {
-                  // save token
-                  OauthStorage.saveAccess(token);
+                  // Save token
+                  this.saveAccess(token);
 
-                  if (typeof params.callback === 'function') {
+                  if (typeof params.callback === "function") {
                     params.callback(OauthStorage.accessToken);
                   }
                 } else if (OauthUtils.assertAvailable(token.error)) {
-                  if (typeof params.callback === 'function') {
+                  if (typeof params.callback === "function") {
                     params.callback(false, token.errorDescription);
                   }
                 } else {
-                  if (typeof params.callback === 'function') {
+                  if (typeof params.callback === "function") {
                     params.callback(false);
                   }
                 }
               } else {
-                if (typeof params.callback === 'function') {
+                if (typeof params.callback === "function") {
                   params.callback(false);
                 }
               }
@@ -610,30 +642,31 @@ export class Oauth {
           // Get token
           this.oauthTokenWithClientCredentials(
             scope,
-            /**Ajax Response callback
-             * @param token OauthTokenResponse
-             * @param xhr XMLHttpRequest | ActiveXObject
+            /**
+             * Ajax Response callback
+             * @param {OauthTokenResponse} token
+             * @param {XMLHttpRequest} xhr
              * */
-            (token, xhr) => {
+            (token: OauthTokenResponse, xhr: XMLHttpRequest) => {
               if (OauthUtils.assertAvailable(token)) {
                 if (OauthUtils.assertAvailable(token.accessToken)) {
-                  // save token
-                  OauthStorage.saveAccess(token);
+                  // Save token
+                  this.saveAccess(token);
 
-                  if (typeof params.callback === 'function') {
+                  if (typeof params.callback === "function") {
                     params.callback(OauthStorage.accessToken);
                   }
                 } else if (OauthUtils.assertAvailable(token.error)) {
-                  if (typeof params.callback === 'function') {
+                  if (typeof params.callback === "function") {
                     params.callback(false, token.errorDescription);
                   }
                 } else {
-                  if (typeof params.callback === 'function') {
+                  if (typeof params.callback === "function") {
                     params.callback(false);
                   }
                 }
               } else {
-                if (typeof params.callback === 'function') {
+                if (typeof params.callback === "function") {
                   params.callback(false);
                 }
               }
@@ -649,32 +682,36 @@ export class Oauth {
     const refreshOauthToken = (refreshToken: string) => {
       this.oauthRefreshToken(
         refreshToken,
-        /**Ajax Response callback
-         * @param token OauthTokenResponse
-         * @param xhr XMLHttpRequest | ActiveXObject
+        /**
+         * Ajax Response callback
+         * @param {OauthTokenResponse} token
+         * @param {XMLHttpRequest} xhr
          * */
-        (token, xhr) => {
+        (token: OauthTokenResponse, xhr: XMLHttpRequest) => {
           if (OauthUtils.assertAvailable(token)) {
             if (OauthUtils.assertAvailable(token.accessToken)) {
-              // save token
-              OauthStorage.saveAccess(token);
-              if (typeof params.callback === 'function') {
+              // Save token
+              this.saveAccess(token);
+
+              if (typeof params.callback === "function") {
                 params.callback(OauthStorage.accessToken);
               }
             } else if (OauthUtils.assertAvailable(token.error)) {
-              if (typeof params.callback === 'function') {
+              if (typeof params.callback === "function") {
                 params.callback(false, token.errorDescription);
-                OauthStorage.clearAccess();
+                // Clear token
+                this.clearAccess();
                 getNewOauthToken();
               }
             } else {
-              if (typeof params.callback === 'function') {
-                OauthStorage.clearAccess();
+              if (typeof params.callback === "function") {
+                // Clear token
+                this.clearAccess();
                 params.callback(false);
               }
             }
           } else {
-            if (typeof params.callback === 'function') {
+            if (typeof params.callback === "function") {
               params.callback(false);
             }
           }
@@ -682,16 +719,16 @@ export class Oauth {
       );
     };
 
-    if (OauthUtils.assertAvailable(OauthUtils.getUrlParam('access_token'))) {
-      const accessToken = OauthUtils.getUrlParam('access_token');
+    if (OauthUtils.assertAvailable(OauthUtils.getUrlParam("access_token"))) {
+      const accessToken = OauthUtils.getUrlParam("access_token");
       if (!OauthUtils.hasTokenExpired(accessToken)) {
-        if (typeof params.callback === 'function') {
+        if (typeof params.callback === "function") {
           params.callback(
             OauthUtils.assertAvailable(accessToken) ? accessToken : true
           );
         }
       } else {
-        if (typeof params.callback === 'function') {
+        if (typeof params.callback === "function") {
           params.callback(false);
         }
       }
@@ -701,7 +738,7 @@ export class Oauth {
       /*Token available, check for refreshing*/
       if (OauthUtils.assertAvailable(accessToken)) {
         if (!OauthUtils.hasTokenExpired(accessToken)) {
-          if (typeof params.callback === 'function') {
+          if (typeof params.callback === "function") {
             params.callback(accessToken);
           }
         } else {
@@ -728,11 +765,12 @@ export class Oauth {
     return OauthUtils.hasTokenExpired(OauthStorage.accessToken);
   }
 
-  /**Oauth Authorization
-   * @param scope
-   * @param redirect_url
-   * @param user_id
-   * @param state
+  /**
+   * Oauth Authorization
+   * @param {string[]} scope
+   * @param {string} redirect_url
+   * @param {string} user_id
+   * @param {string} state
    * */
   oauthAuthorize(
     scope: string[],
@@ -744,12 +782,12 @@ export class Oauth {
       throw new Error("'redirect_url' Required");
     }
 
-    OauthStorage.set(OauthStorage.currentStateKey, state, true);
+    OauthStorage.set(OauthStorageKeys.CurrentStateKey, state, true);
     const params = {
       client_id: this.clientId,
-      scope: scope.join(' '),
+      scope: scope.join(" "),
       state: state,
-      response_type: 'code',
+      response_type: "code",
       user_id: user_id,
       redirect_uri: redirect_url,
     };
@@ -757,14 +795,15 @@ export class Oauth {
     const url = `${this.authorizeUrl}?${OauthUtils.urlEncodeObject(params)}`;
 
     // Open authorization url
-    window.open(url, '_blank');
+    window.open(url, "_blank");
   }
 
-  /**Oauth Authorization
-   * @param scope
-   * @param redirect_url
-   * @param email
-   * @param state
+  /**
+   * Oauth Authorization
+   * @param {string[]} scope
+   * @param {string} redirect_url
+   * @param {string} email
+   * @param {string} state
    * */
   oauthAuthorizeWithEmail(
     scope: string[],
@@ -776,12 +815,12 @@ export class Oauth {
       throw new Error("'redirect_url' Required");
     }
 
-    OauthStorage.set(OauthStorage.currentStateKey, state, true);
+    OauthStorage.set(OauthStorageKeys.CurrentStateKey, state, true);
     const params = {
       client_id: this.clientId,
-      scope: scope.join(' '),
+      scope: scope.join(" "),
       state: state,
-      response_type: 'code',
+      response_type: "code",
       email: email,
       redirect_uri: redirect_url,
     };
@@ -789,14 +828,15 @@ export class Oauth {
     const url = `${this.authorizeUrl}?${OauthUtils.urlEncodeObject(params)}`;
 
     // Open authorization url
-    window.open(url, '_blank');
+    window.open(url, "_blank");
   }
 
-  /**Oauth Authorization
-   * @param scope
-   * @param redirect_url
-   * @param user_id
-   * @param state
+  /**
+   * Oauth Authorization
+   * @param {string[]} scope
+   * @param {string} redirect_url
+   * @param {string} user_id
+   * @param {string} state
    * */
   oauthAuthorizeImplicit(
     scope: string[],
@@ -811,24 +851,25 @@ export class Oauth {
       throw new Error("'scope' Required");
     }
 
-    OauthStorage.set(OauthStorage.currentStateKey, state, true);
+    OauthStorage.set(OauthStorageKeys.CurrentStateKey, state, true);
     const params = {
       client_id: this.clientId,
-      scope: scope.join(' '),
+      scope: scope.join(" "),
       state: state,
-      response_type: 'token',
+      response_type: "token",
       user_id: user_id,
       redirect_uri: redirect_url,
     };
     const url = `${this.authorizeUrl}?${OauthUtils.urlEncodeObject(params)}`;
 
     // Open authorization url
-    window.open(url, '_blank');
+    window.open(url, "_blank");
   }
 
-  /**Get oauth token with Client credentials
-   * @param scope
-   * @param callback function
+  /**
+   * Get oauth token with Client credentials
+   * @param {string[]} scope
+   * @param {(verify: OauthTokenResponse, xhr: XMLHttpRequest)} callback
    * */
   oauthTokenWithClientCredentials(
     scope: string[],
@@ -840,34 +881,35 @@ export class Oauth {
         grant_type: OauthGrantType.Client_Credentials,
         client_id: this.clientId,
         client_secret: this.clientSecret,
-        scope: scope.join(' '),
+        scope: scope.join(" "),
       },
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
-      success: (xhr) => {
+      success: (xhr: XMLHttpRequest) => {
         const token = OauthResponse.parseTokenResponse(xhr.responseText);
-        if (typeof callback === 'function') {
+        if (typeof callback === "function") {
           callback(token, xhr);
         }
       },
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
-      fail: (xhr) => {
+      fail: (xhr: XMLHttpRequest) => {
         const token = OauthResponse.parseTokenResponse(xhr.responseText);
-        if (typeof callback === 'function') {
+        if (typeof callback === "function") {
           callback(token, xhr);
         }
       },
     });
   }
 
-  /**Get oauth token with Client credentials
-   * @param username
-   * @param password
-   * @param scope
-   * @param callback function
+  /**
+   * Get oauth token with Client credentials
+   * @param {string} username
+   * @param {string} password
+   * @param {string[]} scope
+   * @param {(verify: OauthTokenResponse, xhr: XMLHttpRequest)} callback
    * */
   oauthTokenWithUserCredentials(
     username: string,
@@ -889,23 +931,23 @@ export class Oauth {
         client_secret: this.clientSecret,
         username: username,
         password: password,
-        scope: scope.join(' '),
+        scope: scope.join(" "),
       },
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
-      success: (xhr) => {
+      success: (xhr: XMLHttpRequest) => {
         const token = OauthResponse.parseTokenResponse(xhr.responseText);
-        if (typeof callback === 'function') {
+        if (typeof callback === "function") {
           callback(token, xhr);
         }
       },
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
-      fail: (xhr) => {
+      fail: (xhr: XMLHttpRequest) => {
         const token = OauthResponse.parseTokenResponse(xhr.responseText);
-        if (typeof callback === 'function') {
+        if (typeof callback === "function") {
           callback(token, xhr);
         }
       },
@@ -913,9 +955,9 @@ export class Oauth {
   }
 
   /**Get oauth token with Client credentials
-   * @param code String
-   * @param redirect_uri String
-   * @param callback function
+   * @param {string} code
+   * @param {string} redirect_uri
+   * @param {(verify: OauthTokenResponse, xhr: XMLHttpRequest)} callback
    * */
   oauthTokenWithAuthorizationCode(
     code: string,
@@ -932,20 +974,20 @@ export class Oauth {
         client_secret: this.clientSecret,
       },
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
-      success: (xhr) => {
+      success: (xhr: XMLHttpRequest) => {
         const token = OauthResponse.parseTokenResponse(xhr.responseText);
-        if (typeof callback === 'function') {
+        if (typeof callback === "function") {
           callback(token, xhr);
         }
       },
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
-      fail: (xhr) => {
+      fail: (xhr: XMLHttpRequest) => {
         const token = OauthResponse.parseTokenResponse(xhr.responseText);
-        if (typeof callback === 'function') {
+        if (typeof callback === "function") {
           callback(token, xhr);
         }
       },
@@ -954,8 +996,8 @@ export class Oauth {
 
   /**Get oauth Refresh Token with
    * Client credentials
-   * @param refreshToken string
-   * @param callback function
+   * @param {string} refreshToken
+   * @param {(verify: OauthTokenResponse, xhr: XMLHttpRequest)} callback
    * */
   oauthRefreshToken(
     refreshToken: string,
@@ -970,27 +1012,28 @@ export class Oauth {
         client_secret: this.clientSecret,
       },
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
-      success: (xhr) => {
+      success: (xhr: XMLHttpRequest) => {
         const token = OauthResponse.parseTokenResponse(xhr.responseText);
-        if (typeof callback === 'function') {
+        if (typeof callback === "function") {
           callback(token, xhr);
         }
       },
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
-      fail: (xhr) => {
+      fail: (xhr: XMLHttpRequest) => {
         const token = OauthResponse.parseTokenResponse(xhr.responseText);
-        if (typeof callback === 'function') {
+        if (typeof callback === "function") {
           callback(token, xhr);
         }
       },
     });
   }
 
-  /**Get oauth Refresh Token with
+  /**
+   * Get oauth Refresh Token with
    * Client credentials
    * @param accessToken string
    * @param callback function
@@ -999,30 +1042,28 @@ export class Oauth {
     accessToken: string,
     callback: (verify: OauthVerificationResponse, xhr: XMLHttpRequest) => any
   ) {
-    OauthRequest.post({
+    OauthRequest.get({
       url: this.verifyTokenUrl,
-      params: {
-        access_token: accessToken,
-      },
+      accessToken,
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
-      success: (xhr) => {
+      success: (xhr: XMLHttpRequest) => {
         const verify = OauthResponse.parseVerificationResponse(
           xhr.responseText
         );
-        if (typeof callback === 'function') {
+        if (typeof callback === "function") {
           callback(verify, xhr);
         }
       },
       /**Ajax Response callback
-       * @param xhr XMLHttpRequest | ActiveXObject
+       * @param {XMLHttpRequest} xhr
        * */
-      fail: (xhr) => {
+      fail: (xhr: XMLHttpRequest) => {
         const verify = OauthResponse.parseVerificationResponse(
           xhr.responseText
         );
-        if (typeof callback === 'function') {
+        if (typeof callback === "function") {
           callback(verify, xhr);
         }
       },
@@ -1032,37 +1073,39 @@ export class Oauth {
 
 /**Grant Types*/
 export enum OauthGrantType {
-  Client_Credentials = 'client_credentials',
-  Authorization_Code = 'authorization_code',
-  User_Credentials = 'password',
-  Refresh_Token = 'refresh_token',
-  Auto = 'auto',
+  Client_Credentials = "client_credentials",
+  Authorization_Code = "authorization_code",
+  User_Credentials = "password",
+  Refresh_Token = "refresh_token",
+  Auto = "auto",
 }
 
 /**Http Request Method*/
 export enum OauthRequestMethod {
-  GET = 'get',
-  POST = 'post',
-  PUT = 'put',
-  DELETE = 'delete',
+  GET = "get",
+  POST = "post",
+  PUT = "put",
+  DELETE = "delete",
 }
 
 /**Http Request Params*/
 export interface OauthRequestParams {
-  url?: string;
+  url: string;
   headers?: {
-    [header: string]: string | string[];
+    [header: string]: string;
   };
   query?: {
-    [query: string]: string | string[];
+    [query: string]: string;
   };
   params?: {
-    [param: string]: string | string[];
+    [param: string]: any;
   };
+  withCredentials?: boolean;
   username?: string;
   password?: string;
-  withCredentials?: boolean;
   withAccessToken?: boolean;
+  accessTokenType?: string;
+  accessToken?: string;
   success?: (xhr?: XMLHttpRequest, result?: string) => any;
   fail?: (xhr?: XMLHttpRequest) => any;
 }
@@ -1070,224 +1113,140 @@ export interface OauthRequestParams {
 /**Make Oauth Http requests*/
 export class OauthRequest {
   private readonly xhttp: XMLHttpRequest;
-  private username: string;
-  private password: string;
-  private withCredentials: boolean;
-  private withAccessToken: boolean;
+  private data: OauthRequestParams;
   private method: OauthRequestMethod;
-  private url: string;
-  private headers: object;
-  private query: any;
-  private params: any;
-  private success: (xhr: XMLHttpRequest, result: string) => any;
-  private fail: (xhr: XMLHttpRequest) => any;
 
   /**Make GET Requests
-   * @param data Object
-   * @param data.username string - Auth username (optional)
-   * @param data.password string - Auth password (optional)
-   * @param data.withCredentials boolean - Use Credentials (username & password) default = false
-   * @param data.withAccessToken boolean - Use Access Token Header default = false
-   * @param data.url string - Request Url
-   * @param data.headers Object
-   * @param data.query Object
-   * @param data.params Object
-   * @param data.success(xhr,result)
-   * @param data.fail(xhr)
+   * @param {OauthRequestParams} data
    * */
   static get(data: OauthRequestParams) {
-    const http = new OauthRequest();
-    http.username = data.username;
-    http.password = data.password;
-    http.withCredentials = data.withCredentials;
-    http.withAccessToken = data.withAccessToken;
-    http.method = OauthRequestMethod.GET;
-    http.url = data.url;
-    http.headers = data.headers;
-    http.query = data.query;
-    http.params = data.params;
-    http.success = data.success;
-    http.fail = data.fail;
+    const http = new OauthRequest(data, OauthRequestMethod.GET);
     http.request();
   }
 
   /**Make POST Requests
-   * @param data object
-   * @param data.username string - Auth username (optional)
-   * @param data.password string - Auth password (optional)
-   * @param data.withCredentials boolean - Use Credentials (username & password) default = false
-   * @param data.withAccessToken boolean - Use Access Token Header default = false
-   * @param data.url string - Request Url
-   * @param data.headers Object
-   * @param data.query Object
-   * @param data.params Object
-   * @param data.success(xhr,result)
-   * @param data.fail(xhr)
+   * @param {OauthRequestParams} data
    * */
   static post(data: OauthRequestParams) {
-    const http = new OauthRequest();
-    http.username = data.username;
-    http.password = data.password;
-    http.withCredentials = data.withCredentials;
-    http.withAccessToken = data.withAccessToken;
-    http.method = OauthRequestMethod.POST;
-    http.url = data.url;
-    http.headers = data.headers;
-    http.query = data.query;
-    http.params = data.params;
-    http.success = data.success;
-    http.fail = data.fail;
+    const http = new OauthRequest(data, OauthRequestMethod.POST);
     http.request();
   }
 
   /**Make PUT Requests
-   * @param data object
-   * @param data.username string - Auth username (optional)
-   * @param data.password string - Auth password (optional)
-   * @param data.withCredentials boolean - Use Credentials (username & password) default = false
-   * @param data.withAccessToken boolean - Use Access Token Header default = false
-   * @param data.url string - Request Url
-   * @param data.headers Object
-   * @param data.query Object
-   * @param data.params Object
-   * @param data.success(xhr,result)
-   * @param data.fail(xhr)
+   * @param {OauthRequestParams} data
    * */
   static put(data: OauthRequestParams) {
-    const http = new OauthRequest();
-    http.username = data.username;
-    http.password = data.password;
-    http.withCredentials = data.withCredentials;
-    http.withAccessToken = data.withAccessToken;
-    http.method = OauthRequestMethod.PUT;
-    http.url = data.url;
-    http.headers = data.headers;
-    http.query = data.query;
-    http.params = data.params;
-    http.success = data.success;
-    http.fail = data.fail;
+    const http = new OauthRequest(data, OauthRequestMethod.PUT);
     http.request();
   }
 
   /**Make DELETE Requests
-   * @param data object
-   * @param data.username string - Auth username (optional)
-   * @param data.password string - Auth password (optional)
-   * @param data.withCredentials boolean - Use Credentials (username & password) default = false
-   * @param data.withAccessToken boolean - Use Access Token Header default = false
-   * @param data.url string - Request Url
-   * @param data.headers Object
-   * @param data.query Object
-   * @param data.params Object
-   * @param data.success(xhr,result)
-   * @param data.fail(xhr)
+   * @param {OauthRequestParams} data
    * */
   static delete(data: OauthRequestParams) {
-    const http = new OauthRequest();
-    http.username = data.username;
-    http.password = data.password;
-    http.withCredentials = data.withCredentials;
-    http.withAccessToken = data.withAccessToken;
-    http.method = OauthRequestMethod.DELETE;
-    http.url = data.url;
-    http.headers = data.headers;
-    http.query = data.query;
-    http.params = data.params;
-    http.success = data.success;
-    http.fail = data.fail;
+    const http = new OauthRequest(data, OauthRequestMethod.DELETE);
     http.request();
   }
 
-  constructor() {
+  /**
+   * @param {OauthRequestParams} data
+   * @param {OauthRequestMethod} method
+   * */
+  constructor(
+    data: OauthRequestParams,
+    method: OauthRequestMethod = OauthRequestMethod.GET
+  ) {
+    this.data = data;
+    this.method = method;
     this.xhttp = new XMLHttpRequest();
   }
 
   /**Make Http requests*/
   request() {
-    if (this.username == null || typeof this.username === 'undefined') {
-      this.username = '';
+    if (!OauthUtils.assertAvailable(this.data.username)) {
+      this.data.username = "";
     }
-    if (this.password == null || typeof this.password === 'undefined') {
-      this.password = '';
+    if (!OauthUtils.assertAvailable(this.data.password)) {
+      this.data.password = "";
     }
-    if (
-      this.withCredentials == null ||
-      typeof this.withCredentials === 'undefined'
-    ) {
-      this.withCredentials = false;
+    if (!OauthUtils.assertAvailable(this.data.withCredentials)) {
+      this.data.withCredentials = false;
     }
-    if (
-      this.withAccessToken == null ||
-      typeof this.withAccessToken === 'undefined'
-    ) {
-      this.withAccessToken = false;
+    if (!OauthUtils.assertAvailable(this.data.withAccessToken)) {
+      this.data.withAccessToken = false;
     }
 
     // If Queries available
-    if (OauthUtils.assertAvailable(this.query)) {
-      if (this.url.match(/('?')/) == null) {
-        this.url += `?${OauthUtils.urlEncodeObject(this.query)}`;
+    if (OauthUtils.assertAvailable(this.data.query)) {
+      if (this.data.url.match(/('?')/) == null) {
+        this.data.url += `?${OauthUtils.urlEncodeObject(this.data.query)}`;
       } else {
-        this.url += `&${OauthUtils.urlEncodeObject(this.query)}`;
+        this.data.url += `&${OauthUtils.urlEncodeObject(this.data.query)}`;
       }
     }
 
     // If GET Request
     if (this.method === OauthRequestMethod.GET) {
-      if (OauthUtils.assertAvailable(this.params)) {
-        if (this.url.match(/('?')/) == null) {
-          this.url += `?${OauthUtils.urlEncodeObject(this.params)}`;
+      if (OauthUtils.assertAvailable(this.data.params)) {
+        if (this.data.url.match(/('?')/) == null) {
+          this.data.url += `?${OauthUtils.urlEncodeObject(this.data.params)}`;
         } else {
-          this.url += `&${OauthUtils.urlEncodeObject(this.params)}`;
+          this.data.url += `&${OauthUtils.urlEncodeObject(this.data.params)}`;
         }
       }
     }
 
-    this.xhttp.withCredentials = this.withCredentials;
-    this.xhttp.open(this.method.toString().toLowerCase(), this.url);
+    this.xhttp.withCredentials = this.data.withCredentials;
+    this.xhttp.open(this.method.toString().toLowerCase(), this.data.url);
 
     // Get response
     this.xhttp.onreadystatechange = () => {
       if (this.xhttp.readyState === this.xhttp.DONE) {
         if (this.xhttp.status === 200) {
-          if (typeof this.success === 'function') {
-            this.success(this.xhttp, this.xhttp.responseText);
+          if (this.data.success && typeof this.data.success === "function") {
+            this.data.success(this.xhttp, this.xhttp.responseText);
           }
         } else {
-          if (typeof this.fail === 'function') {
-            this.fail(this.xhttp);
+          if (this.data.fail && typeof this.data.fail === "function") {
+            this.data.fail(this.xhttp);
           }
         }
       }
     };
 
     // Add headers
-    if (this.headers !== null && typeof this.headers === 'object') {
-      for (const key in this.headers) {
-        if (this.headers.hasOwnProperty(key)) {
+    if (this.data.headers !== null && typeof this.data.headers === "object") {
+      for (const key in this.data.headers) {
+        if (this.data.headers.hasOwnProperty(key)) {
           if (
-            this.headers[key as keyof object] !== null &&
-            typeof this.headers[key as keyof object] !== 'undefined'
+            this.data.headers[key as keyof object] !== null &&
+            typeof this.data.headers[key as keyof object] !== "undefined"
           ) {
-            this.xhttp.setRequestHeader(key, this.headers[key as keyof object]);
+            this.xhttp.setRequestHeader(
+              key,
+              this.data.headers[key as keyof object]
+            );
           }
         }
       }
     }
 
     // Add Basic Credentials if requested
-    if (this.withCredentials) {
+    if (this.data.withCredentials) {
       this.xhttp.setRequestHeader(
-        'Authorization',
-        'Basic ' + btoa(this.username + ':' + this.password)
+        "Authorization",
+        "Basic " +
+          Buffer.from(this.data.username + ":" + this.data.password).toString(
+            "base64"
+          )
       );
     }
 
     // Add Access Token if requested
-    if (this.withAccessToken) {
+    if (this.data.withAccessToken) {
       this.xhttp.setRequestHeader(
-        'Authorization',
-        OauthStorage.tokenType + ' ' + OauthStorage.accessToken
+        "Authorization",
+        (this.data.accessTokenType || "Bearer") + " " + this.data.accessToken
       );
     }
 
@@ -1295,14 +1254,14 @@ export class OauthRequest {
     if (this.method === OauthRequestMethod.GET) {
       this.xhttp.send();
     } else {
-      if (this.params instanceof FormData) {
-        this.xhttp.send(this.params);
+      if (this.data.params instanceof FormData) {
+        this.xhttp.send(this.data.params);
       } else {
         this.xhttp.setRequestHeader(
-          'Content-Type',
-          'application/x-www-form-urlencoded'
+          "Content-Type",
+          "application/x-www-form-urlencoded"
         );
-        const data = OauthUtils.urlEncodeObject(this.params);
+        const data = OauthUtils.urlEncodeObject(this.data.params);
         this.xhttp.send(data);
       }
     }
@@ -1365,9 +1324,9 @@ export class OauthVerificationResponse {
 
   constructor(data: []) {
     if (!data) return;
-    this.success = data['success' as keyof object];
-    this.error = data['error' as keyof object];
-    this.errorDescription = data['error_description' as keyof object];
+    this.success = data["success" as keyof object];
+    this.error = data["error" as keyof object];
+    this.errorDescription = data["error_description" as keyof object];
   }
 }
 
@@ -1380,11 +1339,11 @@ export class OauthAuthorizationResponse {
 
   constructor(data: []) {
     if (!data) return;
-    this.state = data['state' as keyof object];
-    this.code = data['code' as keyof object];
+    this.state = data["state" as keyof object];
+    this.code = data["code" as keyof object];
 
-    this.error = data['error' as keyof object];
-    this.errorDescription = data['error_description' as keyof object];
+    this.error = data["error" as keyof object];
+    this.errorDescription = data["error_description" as keyof object];
   }
 }
 
@@ -1400,13 +1359,13 @@ export class OauthTokenResponse {
 
   constructor(data: []) {
     if (!data) return;
-    this.accessToken = data['access_token' as keyof object];
-    this.refreshToken = data['refresh_token' as keyof object];
-    this.tokenType = data['token_type' as keyof object];
-    this.accessScope = data['scope' as keyof object];
-    this.expiresIn = data['expires_in' as keyof object];
+    this.accessToken = data["access_token" as keyof object];
+    this.refreshToken = data["refresh_token" as keyof object];
+    this.tokenType = data["token_type" as keyof object];
+    this.accessScope = data["scope" as keyof object];
+    this.expiresIn = data["expires_in" as keyof object];
 
-    this.error = data['error' as keyof object];
-    this.errorDescription = data['error_description' as keyof object];
+    this.error = data["error" as keyof object];
+    this.errorDescription = data["error_description" as keyof object];
   }
 }

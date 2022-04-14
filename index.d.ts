@@ -1,16 +1,23 @@
 /**Store and Retrieve Oauth variables*/
-export declare class OauthStorage {
-    static get accessTokenKey(): string;
-    static get refreshTokenKey(): string;
-    static get accessScopeKey(): string;
-    static get tokenTypeKey(): string;
-    static get expiresInKey(): string;
-    static get currentStateKey(): string;
-    /**Save Access data to Local storage
-     * @param accessData OauthTokenResponse */
-    static saveAccess(accessData: OauthTokenResponse): void;
-    /**Clear all access data from session*/
-    static clearAccess(): void;
+export interface OauthStorageInterface<T> {
+    get(key: string): Promise<T>;
+    set(key: string, value: T): Promise<void>;
+    remove(key: string): Promise<void>;
+    clearAll(): Promise<void>;
+}
+export declare enum OauthStorageKeys {
+    AccessTokenKey = "access_token",
+    RefreshTokenKey = "refresh_token",
+    AccessScopeKey = "scope",
+    TokenTypeKey = "token_type",
+    ExpiresInKey = "expires_in",
+    CurrentStateKey = "current_state"
+}
+export declare class OauthStorage implements OauthStorageInterface<string> {
+    get(key: string): Promise<string>;
+    set(key: string, value: string): Promise<void>;
+    remove(key: string): Promise<any>;
+    clearAll(): Promise<any>;
     /** Set data - localstorage
      * @param name  name
      * @param value  value
@@ -113,12 +120,15 @@ export declare class Oauth {
     private readonly authorizeUrl;
     private readonly tokenUrl;
     private readonly verifyTokenUrl;
-    /**@param data object
-     * @param data.clientId - Your Application's Client ID
-     * @param data.clientSecret - Your Application's Client Secret
-     * @param data.authorizeUrl - Url to Authorize access (For authorization_code grant_type)
-     * @param data.tokenUrl - Url to obtain token
-     * @param data.verifyTokenUrl - Url to verify token
+    private readonly storage;
+    /**
+     * @param {object} data
+     * @param {string} data.clientId - Your Application's Client ID
+     * @param {string} data.clientSecret - Your Application's Client Secret
+     * @param {string} data.authorizeUrl - [GET] Url endpoint to authorize or request access
+     * @param {string} data.tokenUrl - Url endpoint to obtain token
+     * @param {string} data.verifyTokenUrl - [GET] Url endpoint to verify token
+     * @param {OauthStorageInterface<string>} data.storage - Handle custom storage - Default storage = browser localStorage or sessionStorage
      * */
     constructor(data: {
         clientId?: string;
@@ -126,16 +136,25 @@ export declare class Oauth {
         authorizeUrl?: string;
         tokenUrl?: string;
         verifyTokenUrl?: string;
+        storage?: OauthStorageInterface<string>;
     });
-    /**Authorize Access to the app
-     * @param params Object
-     * @param params.grant_type default -> client_credentials grantType
-     * @param params.allowed_grant_types grant_type(s) to ignore if OauthGrantType.Auto selected
-     * @param params.redirect_uri For authorization_code grant_type default -> current url
-     * @param params.user_id For authorization_code grant_type
-     * @param params.username For User_Credentials grant_type
-     * @param params.password For User_Credentials grant_type
-     * @param params.callback()
+    /**
+     * Save Access data to Local storage
+     * @param {OauthTokenResponse} accessData
+     * */
+    saveAccess(accessData: OauthTokenResponse): void;
+    /**Clear all access data from session*/
+    clearAccess(): void;
+    /**
+     * Authorize Access to the app
+     * @param {object} params
+     * @param {OauthGrantType} params.grant_type Default - client_credentials grantType
+     * @param {OauthGrantType[]} params.allowed_grant_types grant_type(s) to ignore if {OauthGrantType.Auto} selected
+     * @param {string} params.redirect_uri For authorization_code grant_type default -> current url
+     * @param {string} params.user_id For authorization_code grant_type
+     * @param {string} params.username For password grant_type
+     * @param {string} params.password For password grant_type
+     * @param {(token: string | boolean, msg?: string)} params.callback
      * */
     authorizeAccess(params: {
         grant_type?: OauthGrantType;
@@ -152,52 +171,58 @@ export declare class Oauth {
      * Check if authorization has expired
      */
     hasExpired(): boolean;
-    /**Oauth Authorization
-     * @param scope
-     * @param redirect_url
-     * @param user_id
-     * @param state
+    /**
+     * Oauth Authorization
+     * @param {string[]} scope
+     * @param {string} redirect_url
+     * @param {string} user_id
+     * @param {string} state
      * */
     oauthAuthorize(scope: string[], redirect_url: string, user_id: string, state: string): void;
-    /**Oauth Authorization
-     * @param scope
-     * @param redirect_url
-     * @param email
-     * @param state
+    /**
+     * Oauth Authorization
+     * @param {string[]} scope
+     * @param {string} redirect_url
+     * @param {string} email
+     * @param {string} state
      * */
     oauthAuthorizeWithEmail(scope: string[], redirect_url: string, email: string, state: string): void;
-    /**Oauth Authorization
-     * @param scope
-     * @param redirect_url
-     * @param user_id
-     * @param state
+    /**
+     * Oauth Authorization
+     * @param {string[]} scope
+     * @param {string} redirect_url
+     * @param {string} user_id
+     * @param {string} state
      * */
     oauthAuthorizeImplicit(scope: string[], redirect_url: string, user_id: string, state: string): void;
-    /**Get oauth token with Client credentials
-     * @param scope
-     * @param callback function
+    /**
+     * Get oauth token with Client credentials
+     * @param {string[]} scope
+     * @param {(verify: OauthTokenResponse, xhr: XMLHttpRequest)} callback
      * */
     oauthTokenWithClientCredentials(scope: string[], callback: (verify: OauthTokenResponse, xhr: XMLHttpRequest) => any): void;
-    /**Get oauth token with Client credentials
-     * @param username
-     * @param password
-     * @param scope
-     * @param callback function
+    /**
+     * Get oauth token with Client credentials
+     * @param {string} username
+     * @param {string} password
+     * @param {string[]} scope
+     * @param {(verify: OauthTokenResponse, xhr: XMLHttpRequest)} callback
      * */
     oauthTokenWithUserCredentials(username: string, password: string, scope: string[], callback: (verify: OauthTokenResponse, xhr: XMLHttpRequest) => any): void;
     /**Get oauth token with Client credentials
-     * @param code String
-     * @param redirect_uri String
-     * @param callback function
+     * @param {string} code
+     * @param {string} redirect_uri
+     * @param {(verify: OauthTokenResponse, xhr: XMLHttpRequest)} callback
      * */
     oauthTokenWithAuthorizationCode(code: string, redirect_uri: string, callback: (verify: OauthTokenResponse, xhr: XMLHttpRequest) => any): void;
     /**Get oauth Refresh Token with
      * Client credentials
-     * @param refreshToken string
-     * @param callback function
+     * @param {string} refreshToken
+     * @param {(verify: OauthTokenResponse, xhr: XMLHttpRequest)} callback
      * */
     oauthRefreshToken(refreshToken: string, callback: (verify: OauthTokenResponse, xhr: XMLHttpRequest) => any): void;
-    /**Get oauth Refresh Token with
+    /**
+     * Get oauth Refresh Token with
      * Client credentials
      * @param accessToken string
      * @param callback function
@@ -221,94 +246,51 @@ export declare enum OauthRequestMethod {
 }
 /**Http Request Params*/
 export interface OauthRequestParams {
-    url?: string;
+    url: string;
     headers?: {
-        [header: string]: string | string[];
+        [header: string]: string;
     };
     query?: {
-        [query: string]: string | string[];
+        [query: string]: string;
     };
     params?: {
-        [param: string]: string | string[];
+        [param: string]: any;
     };
+    withCredentials?: boolean;
     username?: string;
     password?: string;
-    withCredentials?: boolean;
     withAccessToken?: boolean;
+    accessTokenType?: string;
+    accessToken?: string;
     success?: (xhr?: XMLHttpRequest, result?: string) => any;
     fail?: (xhr?: XMLHttpRequest) => any;
 }
 /**Make Oauth Http requests*/
 export declare class OauthRequest {
     private readonly xhttp;
-    private username;
-    private password;
-    private withCredentials;
-    private withAccessToken;
+    private data;
     private method;
-    private url;
-    private headers;
-    private query;
-    private params;
-    private success;
-    private fail;
     /**Make GET Requests
-     * @param data Object
-     * @param data.username string - Auth username (optional)
-     * @param data.password string - Auth password (optional)
-     * @param data.withCredentials boolean - Use Credentials (username & password) default = false
-     * @param data.withAccessToken boolean - Use Access Token Header default = false
-     * @param data.url string - Request Url
-     * @param data.headers Object
-     * @param data.query Object
-     * @param data.params Object
-     * @param data.success(xhr,result)
-     * @param data.fail(xhr)
+     * @param {OauthRequestParams} data
      * */
     static get(data: OauthRequestParams): void;
     /**Make POST Requests
-     * @param data object
-     * @param data.username string - Auth username (optional)
-     * @param data.password string - Auth password (optional)
-     * @param data.withCredentials boolean - Use Credentials (username & password) default = false
-     * @param data.withAccessToken boolean - Use Access Token Header default = false
-     * @param data.url string - Request Url
-     * @param data.headers Object
-     * @param data.query Object
-     * @param data.params Object
-     * @param data.success(xhr,result)
-     * @param data.fail(xhr)
+     * @param {OauthRequestParams} data
      * */
     static post(data: OauthRequestParams): void;
     /**Make PUT Requests
-     * @param data object
-     * @param data.username string - Auth username (optional)
-     * @param data.password string - Auth password (optional)
-     * @param data.withCredentials boolean - Use Credentials (username & password) default = false
-     * @param data.withAccessToken boolean - Use Access Token Header default = false
-     * @param data.url string - Request Url
-     * @param data.headers Object
-     * @param data.query Object
-     * @param data.params Object
-     * @param data.success(xhr,result)
-     * @param data.fail(xhr)
+     * @param {OauthRequestParams} data
      * */
     static put(data: OauthRequestParams): void;
     /**Make DELETE Requests
-     * @param data object
-     * @param data.username string - Auth username (optional)
-     * @param data.password string - Auth password (optional)
-     * @param data.withCredentials boolean - Use Credentials (username & password) default = false
-     * @param data.withAccessToken boolean - Use Access Token Header default = false
-     * @param data.url string - Request Url
-     * @param data.headers Object
-     * @param data.query Object
-     * @param data.params Object
-     * @param data.success(xhr,result)
-     * @param data.fail(xhr)
+     * @param {OauthRequestParams} data
      * */
     static delete(data: OauthRequestParams): void;
-    constructor();
+    /**
+     * @param {OauthRequestParams} data
+     * @param {OauthRequestMethod} method
+     * */
+    constructor(data: OauthRequestParams, method?: OauthRequestMethod);
     /**Make Http requests*/
     request(): void;
 }

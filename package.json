@@ -1,7 +1,7 @@
 {
   "name": "busarm-oauth-client-js",
-  "description": "",
-  "version": "1.0.3",
+  "description": "OAuth 2.0 JS Client based on RFC6749 standards",
+  "version": "1.0.4",
   "keywords": ["oauth", "oauth2", "busarm"],
   "main": "./index.js",
   "types": "./index.d.ts",
@@ -12,6 +12,9 @@
   },
   "bugs": {
     "url": "https://github.com/Busarm/busarm-oauth-client-js/issues"
+  },
+  "publishConfig": {
+    "registry":"https://npm.pkg.github.com"
   },
   "devDependencies": {
     "@types/gulp": "^4.0.9",

@@ -2,10 +2,46 @@
 
 ## Description
 
-OAuth 2.0 JS Client 
+OAuth 2.0 JS Client based on [RFC6749](https://datatracker.ietf.org/doc/html/rfc6749) standards
 
 ## Install
 - Run `npm i busarm-oauth-client-js`
+
+## Versions
+### v1.0.4 
+- Added custom storage option `OauthStorageInterface` to handle custom access storage
+```ts
+    class CustomStorage implements OauthStorageInterface<string> {
+      get(key: string): Promise<string> {
+        return new Promise((resolve) => {
+          resolve(YOUR_CUSTOM_STORAGE.get(key));
+        });
+      }
+      set(key: string, value: string): Promise<void> {
+        return new Promise((resolve) => {
+          resolve(YOUR_CUSTOM_STORAGE.set(key, value));
+        });
+      }
+      remove(key: string): Promise<any> {
+        return new Promise((resolve) => {
+          resolve(YOUR_CUSTOM_STORAGE.remove(key));
+        });
+      }
+      clearAll(): Promise<any> {
+        return new Promise((resolve) => {
+          resolve(YOUR_CUSTOM_STORAGE.clearAll());
+        });
+      }
+    }
+    .....
+
+    const oauth = new Oauth({
+        ....
+        storage: new CustomStorage(); // <Custom storage object>
+    });
+```
+### v1.0.0
+- Initialize project
 
 ## Instructions
 - Initialize oauth
@@ -16,6 +52,7 @@ OAuth 2.0 JS Client
         authorizeUrl: string; // <Oauth Provider Authorization redirect URL>
         tokenUrl: string; // <Oauth Provider Token retrieval API URL>
         verifyTokenUrl: string; // <Oauth Token verification API URL>
+        storage?: OauthStorageInterface<string>; // <Custom storage object>
     });
 ```
 
