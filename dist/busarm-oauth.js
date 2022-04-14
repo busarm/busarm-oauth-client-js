@@ -1,3 +1,34 @@
+var __awaiter =
+  (this && this.__awaiter) ||
+  function (e, o, s, n) {
+    function l(t) {
+      return t instanceof s
+        ? t
+        : new s(function (e) {
+            e(t);
+          });
+    }
+    return new (s || (s = Promise))(function (t, s) {
+      function a(e) {
+        try {
+          i(n.next(e));
+        } catch (e) {
+          s(e);
+        }
+      }
+      function r(e) {
+        try {
+          i(n['throw'](e));
+        } catch (e) {
+          s(e);
+        }
+      }
+      function i(e) {
+        e.done ? t(e.value) : l(e.value).then(a, r);
+      }
+      i((n = n.apply(e, o || [])).next());
+    });
+  };
 export var OauthStorageKeys;
 (function (e) {
   e['AccessTokenKey'] = 'access_token';
@@ -8,85 +39,70 @@ export var OauthStorageKeys;
   e['CurrentStateKey'] = 'current_state';
 })(OauthStorageKeys || (OauthStorageKeys = {}));
 export class OauthStorage {
-  get(t) {
-    return new Promise((e) => {
-      e(OauthStorage.get(t));
+  get(s) {
+    return new Promise((t, e) => {
+      if (typeof sessionStorage !== 'undefined') {
+        let e = sessionStorage.getItem(s);
+        if (OauthUtils.assertAvailable(e)) {
+          t(e);
+        } else {
+          t(null);
+        }
+      } else {
+        e();
+      }
+      if (typeof localStorage !== 'undefined') {
+        let e = localStorage.getItem(s);
+        if (OauthUtils.assertAvailable(e)) {
+          t(e);
+        } else {
+          t(null);
+        }
+      } else {
+        e();
+      }
     });
   }
-  set(t, s) {
-    return new Promise((e) => {
-      e(OauthStorage.set(t, s));
+  set(s, a, r = false) {
+    return new Promise((e, t) => {
+      if (r) {
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem(s, a);
+          e();
+        } else {
+          t();
+        }
+      } else {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(s, a);
+          e();
+        } else {
+          t();
+        }
+      }
     });
   }
   remove(t) {
     return new Promise((e) => {
-      e(OauthStorage.remove(t));
-    });
-  }
-  clearAll() {
-    return new Promise((e) => {
-      e(OauthStorage.clearAll());
-    });
-  }
-  static set(e, t, s = false) {
-    if (s) {
-      if (typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem(e, t);
-      }
-    } else {
       if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(e, t);
+        localStorage.removeItem(t);
       }
-    }
-  }
-  static get(t) {
-    if (typeof sessionStorage !== 'undefined') {
-      let e = sessionStorage.getItem(t);
-      if (OauthUtils.assertAvailable(e)) {
-        return e;
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.removeItem(t);
       }
-    }
-    if (typeof localStorage !== 'undefined') {
-      let e = localStorage.getItem(t);
-      if (OauthUtils.assertAvailable(e)) {
-        return e;
+      e();
+    });
+  }
+  clearAll(t = false) {
+    return new Promise((e) => {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.clear();
       }
-    }
-    return null;
-  }
-  static remove(e) {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(e);
-    }
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.removeItem(e);
-    }
-  }
-  static clearAll(e = false) {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.clear();
-    }
-    if (e && typeof sessionStorage !== 'undefined') {
-      sessionStorage.clear();
-    }
-  }
-  static set accessToken(e) {
-    OauthStorage.set(OauthStorageKeys.AccessTokenKey, e);
-  }
-  static get accessToken() {
-    return OauthStorage.get(OauthStorageKeys.AccessTokenKey);
-  }
-  static get refreshToken() {
-    return OauthStorage.get(OauthStorageKeys.RefreshTokenKey);
-  }
-  static get accessScope() {
-    return OauthStorage.get(OauthStorageKeys.AccessScopeKey);
-  }
-  static get expiresIn() {
-    return OauthStorage.get(OauthStorageKeys.ExpiresInKey);
-  }
-  static get tokenType() {
-    return OauthStorage.get(OauthStorageKeys.TokenTypeKey);
+      if (t && typeof sessionStorage !== 'undefined') {
+        sessionStorage.clear();
+      }
+      e();
+    });
   }
 }
 export class OauthUtils {
@@ -100,17 +116,20 @@ export class OauthUtils {
     return s ? parseInt(s) < Math.floor(Date.now() / 1e3) + 10 : true;
   }
   static hasTokenExpired(e) {
-    e = e || OauthStorage.accessToken;
-    if (OauthUtils.assertAvailable(e)) {
-      if (OauthUtils.parseJWT(e) && !OauthUtils.hasJWTExpired(e)) {
-        return false;
-      } else if (OauthUtils.assertAvailable(OauthStorage.expiresIn)) {
-        return (
-          parseInt(OauthStorage.expiresIn) < Math.floor(Date.now() / 1e3) + 10
-        );
+    return __awaiter(this, void 0, void 0, function* () {
+      e = e || (yield Oauth.storage.get(OauthStorageKeys.AccessTokenKey));
+      if (OauthUtils.assertAvailable(e)) {
+        if (OauthUtils.parseJWT(e) && !OauthUtils.hasJWTExpired(e)) {
+          return false;
+        } else {
+          let e = yield Oauth.storage.get(OauthStorageKeys.ExpiresInKey);
+          if (OauthUtils.assertAvailable(e)) {
+            return parseInt(e) < Math.floor(Date.now() / 1e3) + 10;
+          }
+        }
       }
-    }
-    return true;
+      return true;
+    });
   }
   static safeString(e) {
     if (OauthUtils.assertAvailable(e)) {
@@ -254,276 +273,306 @@ export class Oauth {
     }
     if (OauthUtils.assertAvailable(e.verifyTokenUrl)) {
       this.verifyTokenUrl = e.verifyTokenUrl;
-    } else {
-      throw new Error("'verifyTokenUrl' Required");
     }
     if (OauthUtils.assertAvailable(e.storage)) {
-      this.storage = e.storage;
-    } else {
-      this.storage = new OauthStorage();
+      Oauth.storage = e.storage;
     }
-  }
-  getStorage() {
-    return this.storage;
-  }
-  setStorage(e) {
-    this.storage = e;
   }
   saveAccess(e) {
-    this.storage.set(
-      OauthStorageKeys.AccessTokenKey,
-      OauthUtils.safeString(e.accessToken)
-    );
-    this.storage.set(
-      OauthStorageKeys.RefreshTokenKey,
-      OauthUtils.safeString(e.refreshToken)
-    );
-    this.storage.set(
-      OauthStorageKeys.AccessScopeKey,
-      OauthUtils.safeString(e.accessScope)
-    );
-    this.storage.set(
-      OauthStorageKeys.TokenTypeKey,
-      OauthUtils.safeString(e.tokenType)
-    );
-    this.storage.set(
-      OauthStorageKeys.ExpiresInKey,
-      String(OauthUtils.safeInt(Math.floor(Date.now() / 1e3) + e.expiresIn))
-    );
+    return __awaiter(this, void 0, void 0, function* () {
+      return Promise.all([
+        Oauth.storage.set(
+          OauthStorageKeys.AccessTokenKey,
+          OauthUtils.safeString(e.accessToken)
+        ),
+        Oauth.storage.set(
+          OauthStorageKeys.RefreshTokenKey,
+          OauthUtils.safeString(e.refreshToken)
+        ),
+        Oauth.storage.set(
+          OauthStorageKeys.AccessScopeKey,
+          OauthUtils.safeString(e.accessScope)
+        ),
+        Oauth.storage.set(
+          OauthStorageKeys.TokenTypeKey,
+          OauthUtils.safeString(e.tokenType)
+        ),
+        Oauth.storage.set(
+          OauthStorageKeys.ExpiresInKey,
+          String(OauthUtils.safeInt(Math.floor(Date.now() / 1e3) + e.expiresIn))
+        ),
+      ]);
+    });
   }
   clearAccess() {
-    this.storage.remove(OauthStorageKeys.AccessTokenKey);
-    this.storage.remove(OauthStorageKeys.RefreshTokenKey);
-    this.storage.remove(OauthStorageKeys.AccessScopeKey);
-    this.storage.remove(OauthStorageKeys.TokenTypeKey);
-    this.storage.remove(OauthStorageKeys.ExpiresInKey);
-    this.storage.remove(OauthStorageKeys.CurrentStateKey);
+    return __awaiter(this, void 0, void 0, function* () {
+      Promise.all([
+        Oauth.storage.remove(OauthStorageKeys.AccessTokenKey),
+        Oauth.storage.remove(OauthStorageKeys.RefreshTokenKey),
+        Oauth.storage.remove(OauthStorageKeys.AccessScopeKey),
+        Oauth.storage.remove(OauthStorageKeys.TokenTypeKey),
+        Oauth.storage.remove(OauthStorageKeys.ExpiresInKey),
+        Oauth.storage.remove(OauthStorageKeys.CurrentStateKey),
+      ]);
+    });
   }
-  authorizeAccess(r) {
-    let i = OauthUtils.assertAvailable(r.grant_type)
-      ? r.grant_type
-      : OauthGrantType.Client_Credentials;
-    const o = OauthUtils.assertAvailable(r.allowed_grant_types)
-      ? r.allowed_grant_types
-      : [];
-    const l = OauthUtils.assertAvailable(r.redirect_uri)
-      ? r.redirect_uri
-      : OauthUtils.stripUrlParams(location.origin);
-    const n = OauthUtils.assertAvailable(r.scope) ? r.scope : [];
-    let c = OauthUtils.assertAvailable(r.state)
-      ? r.state
-      : OauthUtils.generateKey(32);
-    const h = () => {
-      switch (i) {
-        case OauthGrantType.Auto:
-          if (
-            OauthUtils.assertAvailable(r.user_id) ||
-            OauthUtils.assertAvailable(OauthUtils.getUrlParam('code'))
-          ) {
-            i = OauthGrantType.Authorization_Code;
-            if (o.includes(i)) {
-              h();
-            } else {
-              r.callback(false);
-            }
-          } else if (
-            OauthUtils.assertAvailable(r.username) &&
-            OauthUtils.assertAvailable(r.password)
-          ) {
-            i = OauthGrantType.User_Credentials;
-            if (o.includes(i)) {
-              h();
-            } else {
-              r.callback(false);
-            }
-          } else {
-            i = OauthGrantType.Client_Credentials;
-            if (o.includes(i)) {
-              h();
-            } else {
-              r.callback(false);
-            }
-          }
-          break;
-        case OauthGrantType.Authorization_Code:
-          const e = OauthUtils.getUrlParam('code');
-          const t = OauthUtils.getUrlParam('error');
-          const s = OauthUtils.getUrlParam('error_description');
-          if (OauthUtils.assertAvailable(e)) {
-            const a = OauthStorage.get(OauthStorageKeys.CurrentStateKey);
-            c = OauthUtils.assertAvailable(a) ? a : c;
-            if (c === OauthUtils.getUrlParam('state')) {
-              this.oauthTokenWithAuthorizationCode(e, l, (e, t) => {
-                if (OauthUtils.assertAvailable(e)) {
-                  if (OauthUtils.assertAvailable(e.accessToken)) {
-                    OauthStorage.remove(OauthStorageKeys.CurrentStateKey);
-                    this.saveAccess(e);
-                    if (typeof r.callback === 'function') {
-                      r.callback(OauthStorage.accessToken);
-                    }
-                    location.replace(
-                      OauthUtils.stripUrlParams(window.location.href)
+  authorizeAccess(u) {
+    return __awaiter(this, void 0, void 0, function* () {
+      let r = OauthUtils.assertAvailable(u.grant_type)
+        ? u.grant_type
+        : OauthGrantType.Client_Credentials;
+      const i = OauthUtils.assertAvailable(u.allowed_grant_types)
+        ? u.allowed_grant_types
+        : [];
+      const o = OauthUtils.assertAvailable(u.redirect_uri)
+        ? u.redirect_uri
+        : OauthUtils.stripUrlParams(location.origin);
+      const n = OauthUtils.assertAvailable(u.scope) ? u.scope : [];
+      let l = OauthUtils.assertAvailable(u.state)
+        ? u.state
+        : OauthUtils.generateKey(32);
+      const c = () =>
+        __awaiter(this, void 0, void 0, function* () {
+          switch (r) {
+            case OauthGrantType.Auto:
+              if (
+                OauthUtils.assertAvailable(u.user_id) ||
+                OauthUtils.assertAvailable(OauthUtils.getUrlParam('code'))
+              ) {
+                r = OauthGrantType.Authorization_Code;
+                if (i.includes(r)) {
+                  c();
+                } else {
+                  u.callback(false);
+                }
+              } else if (
+                OauthUtils.assertAvailable(u.username) &&
+                OauthUtils.assertAvailable(u.password)
+              ) {
+                r = OauthGrantType.User_Credentials;
+                if (i.includes(r)) {
+                  c();
+                } else {
+                  u.callback(false);
+                }
+              } else {
+                r = OauthGrantType.Client_Credentials;
+                if (i.includes(r)) {
+                  c();
+                } else {
+                  u.callback(false);
+                }
+              }
+              break;
+            case OauthGrantType.Authorization_Code:
+              const e = OauthUtils.getUrlParam('code');
+              const t = OauthUtils.getUrlParam('error');
+              const s = OauthUtils.getUrlParam('error_description');
+              if (OauthUtils.assertAvailable(e)) {
+                const a = yield Oauth.storage.get(
+                  OauthStorageKeys.CurrentStateKey
+                );
+                l = OauthUtils.assertAvailable(a) ? a : l;
+                if (l === OauthUtils.getUrlParam('state')) {
+                  this.oauthTokenWithAuthorizationCode(e, o, (e, t) =>
+                    __awaiter(this, void 0, void 0, function* () {
+                      if (OauthUtils.assertAvailable(e)) {
+                        if (OauthUtils.assertAvailable(e.accessToken)) {
+                          Oauth.storage.remove(
+                            OauthStorageKeys.CurrentStateKey
+                          );
+                          yield this.saveAccess(e);
+                          if (typeof u.callback === 'function') {
+                            u.callback(
+                              yield Oauth.storage.get(
+                                OauthStorageKeys.AccessTokenKey
+                              )
+                            );
+                          }
+                          location.replace(
+                            OauthUtils.stripUrlParams(window.location.href)
+                          );
+                        } else if (OauthUtils.assertAvailable(e.error)) {
+                          if (typeof u.callback === 'function') {
+                            u.callback(false, e.errorDescription);
+                          }
+                        } else {
+                          if (typeof u.callback === 'function') {
+                            u.callback(false);
+                          }
+                        }
+                      } else {
+                        if (typeof u.callback === 'function') {
+                          u.callback(false);
+                        }
+                      }
+                    })
+                  );
+                } else {
+                  if (typeof u.callback === 'function') {
+                    u.callback(
+                      false,
+                      'Failed authorize access. CSRF Verification Failed'
                     );
-                  } else if (OauthUtils.assertAvailable(e.error)) {
-                    if (typeof r.callback === 'function') {
-                      r.callback(false, e.errorDescription);
+                  }
+                }
+              } else if (OauthUtils.assertAvailable(t)) {
+                Oauth.storage.remove(OauthStorageKeys.CurrentStateKey);
+                if (OauthUtils.assertAvailable(s)) {
+                  if (typeof u.callback === 'function') {
+                    u.callback(false, s);
+                  }
+                } else {
+                  if (typeof u.callback === 'function') {
+                    u.callback(false, 'Failed authorize access');
+                  }
+                }
+              } else {
+                this.oauthAuthorize(n, o, u.user_id, l);
+              }
+              break;
+            case OauthGrantType.User_Credentials:
+              this.oauthTokenWithUserCredentials(
+                u.username,
+                u.password,
+                n,
+                (e, t) =>
+                  __awaiter(this, void 0, void 0, function* () {
+                    if (OauthUtils.assertAvailable(e)) {
+                      if (OauthUtils.assertAvailable(e.accessToken)) {
+                        yield this.saveAccess(e);
+                        if (typeof u.callback === 'function') {
+                          u.callback(
+                            yield Oauth.storage.get(
+                              OauthStorageKeys.AccessTokenKey
+                            )
+                          );
+                        }
+                      } else if (OauthUtils.assertAvailable(e.error)) {
+                        if (typeof u.callback === 'function') {
+                          u.callback(false, e.errorDescription);
+                        }
+                      } else {
+                        if (typeof u.callback === 'function') {
+                          u.callback(false);
+                        }
+                      }
+                    } else {
+                      if (typeof u.callback === 'function') {
+                        u.callback(false);
+                      }
+                    }
+                  })
+              );
+              break;
+            case OauthGrantType.Client_Credentials:
+            default:
+              this.oauthTokenWithClientCredentials(n, (e, t) =>
+                __awaiter(this, void 0, void 0, function* () {
+                  if (OauthUtils.assertAvailable(e)) {
+                    if (OauthUtils.assertAvailable(e.accessToken)) {
+                      yield this.saveAccess(e);
+                      if (typeof u.callback === 'function') {
+                        u.callback(
+                          yield Oauth.storage.get(
+                            OauthStorageKeys.AccessTokenKey
+                          )
+                        );
+                      }
+                    } else if (OauthUtils.assertAvailable(e.error)) {
+                      if (typeof u.callback === 'function') {
+                        u.callback(false, e.errorDescription);
+                      }
+                    } else {
+                      if (typeof u.callback === 'function') {
+                        u.callback(false);
+                      }
                     }
                   } else {
-                    if (typeof r.callback === 'function') {
-                      r.callback(false);
+                    if (typeof u.callback === 'function') {
+                      u.callback(false);
                     }
                   }
-                } else {
-                  if (typeof r.callback === 'function') {
-                    r.callback(false);
-                  }
-                }
-              });
-            } else {
-              if (typeof r.callback === 'function') {
-                r.callback(
-                  false,
-                  'Failed authorize access. CSRF Verification Failed'
-                );
-              }
-            }
-          } else if (OauthUtils.assertAvailable(t)) {
-            OauthStorage.remove(OauthStorageKeys.CurrentStateKey);
-            if (OauthUtils.assertAvailable(s)) {
-              if (typeof r.callback === 'function') {
-                r.callback(false, s);
-              }
-            } else {
-              if (typeof r.callback === 'function') {
-                r.callback(false, 'Failed authorize access');
-              }
-            }
-          } else {
-            this.oauthAuthorize(n, l, r.user_id, c);
+                })
+              );
+              break;
           }
-          break;
-        case OauthGrantType.User_Credentials:
-          this.oauthTokenWithUserCredentials(
-            r.username,
-            r.password,
-            n,
-            (e, t) => {
-              if (OauthUtils.assertAvailable(e)) {
-                if (OauthUtils.assertAvailable(e.accessToken)) {
-                  this.saveAccess(e);
-                  if (typeof r.callback === 'function') {
-                    r.callback(OauthStorage.accessToken);
-                  }
-                } else if (OauthUtils.assertAvailable(e.error)) {
-                  if (typeof r.callback === 'function') {
-                    r.callback(false, e.errorDescription);
-                  }
-                } else {
-                  if (typeof r.callback === 'function') {
-                    r.callback(false);
-                  }
-                }
-              } else {
-                if (typeof r.callback === 'function') {
-                  r.callback(false);
-                }
-              }
-            }
-          );
-          break;
-        case OauthGrantType.Client_Credentials:
-        default:
-          this.oauthTokenWithClientCredentials(n, (e, t) => {
+        });
+      const e = (e) => {
+        this.oauthRefreshToken(e, (e, t) =>
+          __awaiter(this, void 0, void 0, function* () {
             if (OauthUtils.assertAvailable(e)) {
               if (OauthUtils.assertAvailable(e.accessToken)) {
-                this.saveAccess(e);
-                if (typeof r.callback === 'function') {
-                  r.callback(OauthStorage.accessToken);
+                yield this.saveAccess(e);
+                if (typeof u.callback === 'function') {
+                  u.callback(
+                    yield Oauth.storage.get(OauthStorageKeys.AccessTokenKey)
+                  );
                 }
               } else if (OauthUtils.assertAvailable(e.error)) {
-                if (typeof r.callback === 'function') {
-                  r.callback(false, e.errorDescription);
+                if (typeof u.callback === 'function') {
+                  u.callback(false, e.errorDescription);
+                  this.clearAccess();
+                  c();
                 }
               } else {
-                if (typeof r.callback === 'function') {
-                  r.callback(false);
+                if (typeof u.callback === 'function') {
+                  this.clearAccess();
+                  u.callback(false);
                 }
               }
             } else {
-              if (typeof r.callback === 'function') {
-                r.callback(false);
+              if (typeof u.callback === 'function') {
+                u.callback(false);
               }
             }
-          });
-          break;
-      }
-    };
-    const e = (e) => {
-      this.oauthRefreshToken(e, (e, t) => {
-        if (OauthUtils.assertAvailable(e)) {
-          if (OauthUtils.assertAvailable(e.accessToken)) {
-            this.saveAccess(e);
-            if (typeof r.callback === 'function') {
-              r.callback(OauthStorage.accessToken);
-            }
-          } else if (OauthUtils.assertAvailable(e.error)) {
-            if (typeof r.callback === 'function') {
-              r.callback(false, e.errorDescription);
-              this.clearAccess();
-              h();
-            }
-          } else {
-            if (typeof r.callback === 'function') {
-              this.clearAccess();
-              r.callback(false);
-            }
-          }
-        } else {
-          if (typeof r.callback === 'function') {
-            r.callback(false);
-          }
-        }
-      });
-    };
-    if (OauthUtils.assertAvailable(OauthUtils.getUrlParam('access_token'))) {
-      const t = OauthUtils.getUrlParam('access_token');
-      if (!OauthUtils.hasTokenExpired(t)) {
-        if (typeof r.callback === 'function') {
-          r.callback(OauthUtils.assertAvailable(t) ? t : true);
-        }
-      } else {
-        if (typeof r.callback === 'function') {
-          r.callback(false);
-        }
-      }
-    } else {
-      const t = OauthStorage.accessToken;
-      const s = OauthStorage.refreshToken;
-      if (OauthUtils.assertAvailable(t)) {
+          })
+        );
+      };
+      if (OauthUtils.assertAvailable(OauthUtils.getUrlParam('access_token'))) {
+        const t = OauthUtils.getUrlParam('access_token');
         if (!OauthUtils.hasTokenExpired(t)) {
-          if (typeof r.callback === 'function') {
-            r.callback(t);
+          if (typeof u.callback === 'function') {
+            u.callback(OauthUtils.assertAvailable(t) ? t : true);
           }
         } else {
-          if (OauthUtils.assertAvailable(s)) {
-            e(s);
-          } else {
-            h();
+          if (typeof u.callback === 'function') {
+            u.callback(false);
           }
         }
       } else {
-        h();
+        const t = yield Oauth.storage.get(OauthStorageKeys.AccessTokenKey);
+        const s = yield Oauth.storage.get(OauthStorageKeys.RefreshTokenKey);
+        if (OauthUtils.assertAvailable(t)) {
+          if (!OauthUtils.hasTokenExpired(t)) {
+            if (typeof u.callback === 'function') {
+              u.callback(t);
+            }
+          } else {
+            if (OauthUtils.assertAvailable(s)) {
+              e(s);
+            } else {
+              c();
+            }
+          }
+        } else {
+          c();
+        }
       }
-    }
+    });
   }
   hasExpired() {
-    return OauthUtils.hasTokenExpired(OauthStorage.accessToken);
+    return __awaiter(this, void 0, void 0, function* () {
+      return OauthUtils.hasTokenExpired(
+        yield Oauth.storage.get(OauthStorageKeys.AccessTokenKey)
+      );
+    });
   }
   oauthAuthorize(e, t, s, a) {
     if (!OauthUtils.assertAvailable(t)) {
       throw new Error("'redirect_url' Required");
     }
-    OauthStorage.set(OauthStorageKeys.CurrentStateKey, a, true);
+    Oauth.storage.set(OauthStorageKeys.CurrentStateKey, a, true);
     const r = {
       client_id: this.clientId,
       scope: e.join(' '),
@@ -539,7 +588,7 @@ export class Oauth {
     if (!OauthUtils.assertAvailable(t)) {
       throw new Error("'redirect_url' Required");
     }
-    OauthStorage.set(OauthStorageKeys.CurrentStateKey, a, true);
+    Oauth.storage.set(OauthStorageKeys.CurrentStateKey, a, true);
     const r = {
       client_id: this.clientId,
       scope: e.join(' '),
@@ -558,7 +607,7 @@ export class Oauth {
     if (!OauthUtils.assertAvailable(e)) {
       throw new Error("'scope' Required");
     }
-    OauthStorage.set(OauthStorageKeys.CurrentStateKey, a, true);
+    Oauth.storage.set(OauthStorageKeys.CurrentStateKey, a, true);
     const r = {
       client_id: this.clientId,
       scope: e.join(' '),
@@ -672,24 +721,29 @@ export class Oauth {
     });
   }
   oauthVerifyToken(e, s) {
-    OauthRequest.get({
-      url: this.verifyTokenUrl,
-      accessToken: e,
-      success: (e) => {
-        const t = OauthResponse.parseVerificationResponse(e.responseText);
-        if (typeof s === 'function') {
-          s(t, e);
-        }
-      },
-      fail: (e) => {
-        const t = OauthResponse.parseVerificationResponse(e.responseText);
-        if (typeof s === 'function') {
-          s(t, e);
-        }
-      },
-    });
+    if (this.verifyTokenUrl) {
+      OauthRequest.get({
+        url: this.verifyTokenUrl,
+        accessToken: e,
+        success: (e) => {
+          const t = OauthResponse.parseVerificationResponse(e.responseText);
+          if (typeof s === 'function') {
+            s(t, e);
+          }
+        },
+        fail: (e) => {
+          const t = OauthResponse.parseVerificationResponse(e.responseText);
+          if (typeof s === 'function') {
+            s(t, e);
+          }
+        },
+      });
+    } else {
+      throw new Error("'verifyTokenUrl' was not specified");
+    }
   }
 }
+Oauth.storage = new OauthStorage();
 export var OauthGrantType;
 (function (e) {
   e['Client_Credentials'] = 'client_credentials';

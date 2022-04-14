@@ -1,11 +1,10 @@
 /**Store and Retrieve Oauth variables*/
 export interface OauthStorageInterface<T> {
     get(key: string): Promise<T>;
-    set(key: string, value: T): Promise<void>;
+    set(key: string, value: T, temporary?: boolean): Promise<void>;
     remove(key: string): Promise<void>;
-    clearAll(): Promise<void>;
+    clearAll(temporary?: boolean): Promise<void>;
 }
-
 export enum OauthStorageKeys {
     AccessTokenKey = "access_token",
     RefreshTokenKey = "refresh_token",
@@ -14,200 +13,162 @@ export enum OauthStorageKeys {
     ExpiresInKey = "expires_in",
     CurrentStateKey = "current_state",
 }
-
 export class OauthStorage implements OauthStorageInterface<string> {
     get(key: string): Promise<string> {
-        return new Promise((resolve) => {
-            resolve(OauthStorage.get(key));
-        });
-    }
-    set(key: string, value: string): Promise<void> {
-        return new Promise((resolve) => {
-            resolve(OauthStorage.set(key, value));
-        });
-    }
-    remove(key: string): Promise<any> {
-        return new Promise((resolve) => {
-            resolve(OauthStorage.remove(key));
-        });
-    }
-    clearAll(): Promise<any> {
-        return new Promise((resolve) => {
-            resolve(OauthStorage.clearAll());
-        });
-    }
-
-    /** Set data - localstorage
-     * @param name  name
-     * @param value  value
-     * */
-    static set(name: string, value: any, temporary = false) {
-        if (temporary) {
+        return new Promise((resolve, reject) => {
             if (typeof sessionStorage !== "undefined") {
-                sessionStorage.setItem(name, value);
+                let data = sessionStorage.getItem(key);
+                if (OauthUtils.assertAvailable(data)) {
+                    resolve(data);
+                } else {
+                    resolve(null);
+                }
+            } else {
+                reject();
             }
-        } else {
             if (typeof localStorage !== "undefined") {
-                localStorage.setItem(name, value);
+                let data = localStorage.getItem(key);
+                if (OauthUtils.assertAvailable(data)) {
+                    resolve(data);
+                } else {
+                    resolve(null);
+                }
+            } else {
+                reject();
             }
-        }
+        });
     }
-
-    /** Set data - localStorage
-     * @param name  name
-     * */
-    static get(name: string) {
-        if (typeof sessionStorage !== "undefined") {
-            let data = sessionStorage.getItem(name);
-            if (OauthUtils.assertAvailable(data)) {
-                return data;
+    set(key: string, value: string, temporary = false): Promise<void> {
+        return new Promise((resolve, reject) => {
+            if (temporary) {
+                if (typeof sessionStorage !== "undefined") {
+                    sessionStorage.setItem(key, value);
+                    resolve();
+                } else {
+                    reject();
+                }
+            } else {
+                if (typeof localStorage !== "undefined") {
+                    localStorage.setItem(key, value);
+                    resolve();
+                } else {
+                    reject();
+                }
             }
-        }
-        if (typeof localStorage !== "undefined") {
-            let data = localStorage.getItem(name);
-            if (OauthUtils.assertAvailable(data)) {
-                return data;
+        });
+    }
+    remove(key: string): Promise<void> {
+        return new Promise((resolve) => {
+            if (typeof localStorage !== "undefined") {
+                localStorage.removeItem(key);
             }
-        }
-        return null;
+            if (typeof sessionStorage !== "undefined") {
+                sessionStorage.removeItem(key);
+            }
+            resolve();
+        });
     }
-
-    /** Remove data - localStorage
-     * @param name  string
-     * */
-    static remove(name: string) {
-        if (typeof localStorage !== "undefined") {
-            localStorage.removeItem(name);
-        }
-        if (typeof sessionStorage !== "undefined") {
-            sessionStorage.removeItem(name);
-        }
-    }
-
-    /**Clear all user data*/
-    static clearAll(withTemp = false) {
-        if (typeof localStorage !== "undefined") {
-            localStorage.clear();
-        }
-        if (withTemp && typeof sessionStorage !== "undefined") {
-            sessionStorage.clear();
-        }
-    }
-
-    /**Set Access Token
-     * @param accessToken String
-     * */
-    static set accessToken(accessToken) {
-        OauthStorage.set(OauthStorageKeys.AccessTokenKey, accessToken);
-    }
-
-    /**Get Access Token
-     * @return String
-     * */
-    static get accessToken() {
-        return OauthStorage.get(OauthStorageKeys.AccessTokenKey);
-    }
-    /**Get Refresh Token
-     * @return String
-     * */
-    static get refreshToken() {
-        return OauthStorage.get(OauthStorageKeys.RefreshTokenKey);
-    }
-
-    /**Get Access Scope
-     * @return String
-     * */
-    static get accessScope() {
-        return OauthStorage.get(OauthStorageKeys.AccessScopeKey);
-    }
-
-    /**Get Expires In
-     * @return string
-     * */
-    static get expiresIn() {
-        return OauthStorage.get(OauthStorageKeys.ExpiresInKey);
-    }
-
-    /**Get Token Type
-     * @return String
-     * */
-    static get tokenType() {
-        return OauthStorage.get(OauthStorageKeys.TokenTypeKey);
+    clearAll(temporary = false): Promise<void> {
+        return new Promise((resolve) => {
+            if (typeof localStorage !== "undefined") {
+                localStorage.clear();
+            }
+            if (temporary && typeof sessionStorage !== "undefined") {
+                sessionStorage.clear();
+            }
+            resolve();
+        });
     }
 }
 
 /**Common Functions*/
 export class OauthUtils {
-    /**Check if token is a JWT token and return claims if so
-     *  @return string
+    /**
+     * Check if token is a JWT token and return claims if so
+     * @return {string}
      * */
-    static parseJWT(token: string) {
+    static parseJWT(token: string): string {
         let split = token.split(".");
         return split && split.length == 3 ? atob(split[1]) : null;
     }
 
-    /**Check if JWT Token has expired
-     *  @return boolean
+    /**
+     * Check if JWT Token has expired
+     * @return {boolean}
      * */
-    static hasJWTExpired(token: string) {
+    static hasJWTExpired(token: string): boolean {
         let data = this.parseJson(this.parseJWT(token));
-        let exp = data ? data["exp"] : null;
+        let exp = data ? data["exp" as keyof object] : null;
         return exp ? parseInt(exp) < Math.floor(Date.now() / 1000) + 10 : true; // + 10 to account for any network latency
     }
 
-    /**Check if token has expired
-     *  @return boolean
+    /**
+     * Check if token has expired
+     * @return {Promise<boolean>}
      * */
-    static hasTokenExpired(token?: string) {
-        token = token || OauthStorage.accessToken;
+    static async hasTokenExpired(token?: string): Promise<boolean> {
+        token =
+            token || (await Oauth.storage.get(OauthStorageKeys.AccessTokenKey));
         if (OauthUtils.assertAvailable(token)) {
             if (
                 OauthUtils.parseJWT(token) &&
                 !OauthUtils.hasJWTExpired(token)
             ) {
                 return false;
-            } else if (OauthUtils.assertAvailable(OauthStorage.expiresIn)) {
-                return (
-                    parseInt(OauthStorage.expiresIn) <
-                    Math.floor(Date.now() / 1000) + 10
-                ); // + 10 to account for any network latency
+            } else {
+                let expiresIn = await Oauth.storage.get(
+                    OauthStorageKeys.ExpiresInKey
+                );
+                if (OauthUtils.assertAvailable(expiresIn)) {
+                    return (
+                        parseInt(expiresIn) < Math.floor(Date.now() / 1000) + 10
+                    ); // + 10 to account for any network latency
+                }
             }
         }
         return true;
     }
 
-    /**Get a safe form of string to store,
+    /**
+     * Get a safe form of string to store,
      * eliminating null and 'undefined'
      * @param item
-     *  @return String*/
-    static safeString(item: string) {
+     * @return {string}
+     * */
+    static safeString(item: string): string {
         if (OauthUtils.assertAvailable(item)) {
             return item;
         }
         return "";
     }
 
-    /**Get a safe form of stIntring to store,
+    /**
+     * Get a safe form of stIntring to store,
      * eliminating null and 'undefined'
      * @param item
-     *  @return int*/
-    static safeInt(item: number) {
+     * @return {number}
+     * */
+    static safeInt(item: number): number {
         if (OauthUtils.assertAvailable(item)) {
             return item;
         }
         return 0;
     }
 
-    /**Check if item is nut null, undefined or empty
+    /**
+     * Check if item is nut null, undefined or empty
      * eliminating null and 'undefined'
      * @param item
-     *  @return boolean*/
-    static assertAvailable(item: any) {
+     * @return {boolean}
+     * */
+    static assertAvailable(item: any): boolean {
         return item != null && typeof item !== "undefined" && item !== "";
     }
 
-    /**Count Object array
-     * @return int*/
+    /**
+     * Count Object array
+     * @return {number}
+     * */
     static count(obj: object): number {
         let element_count = 0;
         for (const i in obj) {
@@ -218,8 +179,11 @@ export class OauthUtils {
         return element_count;
     }
 
-    /**Merge Object with another*/
-    static mergeObj(obj: object, src: object) {
+    /**
+     * Merge Object with another
+     * @returns {object}
+     */
+    static mergeObj(obj: object, src: object): object {
         Object.keys(src).forEach((key) => {
             if (src.hasOwnProperty(key)) {
                 if (Array.isArray(obj)) {
@@ -235,9 +199,9 @@ export class OauthUtils {
 
     /**Encode Object content to url string
      *  @param myData Object
-     *  @return String
+     *  @return {string}
      * */
-    static urlEncodeObject(myData: object) {
+    static urlEncodeObject(myData: object): string {
         const encodeObj = (data: any, key: string, parent: any) => {
             const encoded = [];
             for (const subKey in data[key]) {
@@ -311,9 +275,9 @@ export class OauthUtils {
 
     /** Parse Json string to object
      *  @param json string
-     *  @return object
+     *  @return {any}
      *  */
-    static parseJson(json: string) {
+    static parseJson(json: string): any {
         try {
             return JSON.parse(json);
         } catch (e) {
@@ -321,10 +285,15 @@ export class OauthUtils {
         }
     }
 
-    /**Get Url param
+    /**
+     * Get Url param
      * #source http://www.netlobo.com/url_query_string_javascript.html
-     * */
-    static getUrlParam(name: string, url?: string) {
+     *
+     * @param {string} name
+     * @param {string} url
+     * @returns {string}
+     */
+    static getUrlParam(name: string, url?: string): string {
         if (!url) {
             url = location.href;
         }
@@ -336,11 +305,12 @@ export class OauthUtils {
         return results == null ? null : results[1];
     }
 
-    /**Return url without it's url parameters
-     * @param url Url to strip
-     * @return string
+    /**
+     * Return url without it's url parameters
+     * @param {string} url Url to strip
+     * @return {string}
      * */
-    static stripUrlParams(url: string) {
+    static stripUrlParams(url: string): string {
         if (OauthUtils.assertAvailable(url)) {
             return url.split("?")[0];
         } else {
@@ -348,8 +318,12 @@ export class OauthUtils {
         }
     }
 
-    /**Generate Random value*/
-    static generateKey(length: number) {
+    /**
+     * Generate Random value
+     * @param {number} length
+     * @return {string}
+     * */
+    static generateKey(length: number): string {
         if (!OauthUtils.assertAvailable(length)) {
             length = 16;
         }
@@ -374,7 +348,10 @@ export class Oauth {
     private readonly tokenUrl: string;
     private readonly verifyTokenUrl: string;
 
-    private storage: OauthStorageInterface<string>;
+    /**
+     * @var {OauthStorageInterface<string>}
+     */
+    static storage: OauthStorageInterface<string> = new OauthStorage();
 
     /**
      * @param {object} data
@@ -386,10 +363,10 @@ export class Oauth {
      * @param {OauthStorageInterface<string>} data.storage - Handle custom storage - Default storage = browser localStorage or sessionStorage
      * */
     constructor(data: {
-        clientId?: string;
-        clientSecret?: string;
-        authorizeUrl?: string;
-        tokenUrl?: string;
+        clientId: string;
+        clientSecret: string;
+        authorizeUrl: string;
+        tokenUrl: string;
         verifyTokenUrl?: string;
         storage?: OauthStorageInterface<string>;
     }) {
@@ -419,72 +396,56 @@ export class Oauth {
 
         if (OauthUtils.assertAvailable(data.verifyTokenUrl)) {
             this.verifyTokenUrl = data.verifyTokenUrl;
-        } else {
-            throw new Error("'verifyTokenUrl' Required");
         }
 
         if (OauthUtils.assertAvailable(data.storage)) {
-            this.storage = data.storage;
-        } else {
-            this.storage = new OauthStorage();
+            Oauth.storage = data.storage;
         }
-    }
-
-    /**
-     * Get Oauth Storage
-     * @returns {OauthStorageInterface<string>}
-     */
-    getStorage(): OauthStorageInterface<string> {
-        return this.storage;
-    }
-
-    /**
-     * Set Oauth Storage
-     * @param {OauthStorageInterface<string>} storage
-     */
-    setStorage(storage: OauthStorageInterface<string>): void {
-        this.storage = storage;
     }
 
     /**
      * Save Access data to Local storage
      * @param {OauthTokenResponse} accessData
      * */
-    saveAccess(accessData: OauthTokenResponse) {
-        this.storage.set(
-            OauthStorageKeys.AccessTokenKey,
-            OauthUtils.safeString(accessData.accessToken)
-        );
-        this.storage.set(
-            OauthStorageKeys.RefreshTokenKey,
-            OauthUtils.safeString(accessData.refreshToken)
-        );
-        this.storage.set(
-            OauthStorageKeys.AccessScopeKey,
-            OauthUtils.safeString(accessData.accessScope)
-        );
-        this.storage.set(
-            OauthStorageKeys.TokenTypeKey,
-            OauthUtils.safeString(accessData.tokenType)
-        );
-        this.storage.set(
-            OauthStorageKeys.ExpiresInKey,
-            String(
-                OauthUtils.safeInt(
-                    Math.floor(Date.now() / 1000) + accessData.expiresIn
+    async saveAccess(accessData: OauthTokenResponse) {
+        return Promise.all([
+            Oauth.storage.set(
+                OauthStorageKeys.AccessTokenKey,
+                OauthUtils.safeString(accessData.accessToken)
+            ),
+            Oauth.storage.set(
+                OauthStorageKeys.RefreshTokenKey,
+                OauthUtils.safeString(accessData.refreshToken)
+            ),
+            Oauth.storage.set(
+                OauthStorageKeys.AccessScopeKey,
+                OauthUtils.safeString(accessData.accessScope)
+            ),
+            Oauth.storage.set(
+                OauthStorageKeys.TokenTypeKey,
+                OauthUtils.safeString(accessData.tokenType)
+            ),
+            Oauth.storage.set(
+                OauthStorageKeys.ExpiresInKey,
+                String(
+                    OauthUtils.safeInt(
+                        Math.floor(Date.now() / 1000) + accessData.expiresIn
+                    )
                 )
-            )
-        );
+            ),
+        ]);
     }
 
     /**Clear all access data from session*/
-    clearAccess() {
-        this.storage.remove(OauthStorageKeys.AccessTokenKey);
-        this.storage.remove(OauthStorageKeys.RefreshTokenKey);
-        this.storage.remove(OauthStorageKeys.AccessScopeKey);
-        this.storage.remove(OauthStorageKeys.TokenTypeKey);
-        this.storage.remove(OauthStorageKeys.ExpiresInKey);
-        this.storage.remove(OauthStorageKeys.CurrentStateKey);
+    async clearAccess() {
+        Promise.all([
+            Oauth.storage.remove(OauthStorageKeys.AccessTokenKey),
+            Oauth.storage.remove(OauthStorageKeys.RefreshTokenKey),
+            Oauth.storage.remove(OauthStorageKeys.AccessScopeKey),
+            Oauth.storage.remove(OauthStorageKeys.TokenTypeKey),
+            Oauth.storage.remove(OauthStorageKeys.ExpiresInKey),
+            Oauth.storage.remove(OauthStorageKeys.CurrentStateKey),
+        ]);
     }
 
     /**
@@ -498,7 +459,7 @@ export class Oauth {
      * @param {string} params.password For password grant_type
      * @param {(token: string | boolean, msg?: string)} params.callback
      * */
-    authorizeAccess(params: {
+    async authorizeAccess(params: {
         grant_type?: OauthGrantType;
         allowed_grant_types?: OauthGrantType[];
         redirect_uri?: string;
@@ -532,7 +493,7 @@ export class Oauth {
 
         /**Get New Token
          * */
-        const getNewOauthToken = () => {
+        const getNewOauthToken = async () => {
             switch (grant_type) {
                 case OauthGrantType.Auto:
                     if (
@@ -573,7 +534,7 @@ export class Oauth {
                     const error_description =
                         OauthUtils.getUrlParam("error_description");
                     if (OauthUtils.assertAvailable(code)) {
-                        const save_state = OauthStorage.get(
+                        const save_state = await Oauth.storage.get(
                             OauthStorageKeys.CurrentStateKey
                         );
                         state = OauthUtils.assertAvailable(save_state)
@@ -589,7 +550,7 @@ export class Oauth {
                                  * @param {OauthTokenResponse} token
                                  * @param {XMLHttpRequest} xhr
                                  * */
-                                (
+                                async (
                                     token: OauthTokenResponse,
                                     xhr: XMLHttpRequest
                                 ) => {
@@ -599,20 +560,22 @@ export class Oauth {
                                                 token.accessToken
                                             )
                                         ) {
-                                            // Remove instance ID
-                                            OauthStorage.remove(
+                                            // Remove oauth state
+                                            Oauth.storage.remove(
                                                 OauthStorageKeys.CurrentStateKey
                                             );
 
                                             // Save token
-                                            this.saveAccess(token);
+                                            await this.saveAccess(token);
 
                                             if (
                                                 typeof params.callback ===
                                                 "function"
                                             ) {
                                                 params.callback(
-                                                    OauthStorage.accessToken
+                                                    await Oauth.storage.get(
+                                                        OauthStorageKeys.AccessTokenKey
+                                                    )
                                                 );
                                             }
 
@@ -664,7 +627,7 @@ export class Oauth {
                         }
                     } else if (OauthUtils.assertAvailable(error)) {
                         // Remove oauth state
-                        OauthStorage.remove(OauthStorageKeys.CurrentStateKey);
+                        Oauth.storage.remove(OauthStorageKeys.CurrentStateKey);
 
                         if (OauthUtils.assertAvailable(error_description)) {
                             if (typeof params.callback === "function") {
@@ -699,7 +662,10 @@ export class Oauth {
                          * @param {OauthTokenResponse} token
                          * @param {XMLHttpRequest} xhr
                          * */
-                        (token: OauthTokenResponse, xhr: XMLHttpRequest) => {
+                        async (
+                            token: OauthTokenResponse,
+                            xhr: XMLHttpRequest
+                        ) => {
                             if (OauthUtils.assertAvailable(token)) {
                                 if (
                                     OauthUtils.assertAvailable(
@@ -707,11 +673,13 @@ export class Oauth {
                                     )
                                 ) {
                                     // Save token
-                                    this.saveAccess(token);
+                                    await this.saveAccess(token);
 
                                     if (typeof params.callback === "function") {
                                         params.callback(
-                                            OauthStorage.accessToken
+                                            await Oauth.storage.get(
+                                                OauthStorageKeys.AccessTokenKey
+                                            )
                                         );
                                     }
                                 } else if (
@@ -746,7 +714,10 @@ export class Oauth {
                          * @param {OauthTokenResponse} token
                          * @param {XMLHttpRequest} xhr
                          * */
-                        (token: OauthTokenResponse, xhr: XMLHttpRequest) => {
+                        async (
+                            token: OauthTokenResponse,
+                            xhr: XMLHttpRequest
+                        ) => {
                             if (OauthUtils.assertAvailable(token)) {
                                 if (
                                     OauthUtils.assertAvailable(
@@ -754,11 +725,13 @@ export class Oauth {
                                     )
                                 ) {
                                     // Save token
-                                    this.saveAccess(token);
+                                    await this.saveAccess(token);
 
                                     if (typeof params.callback === "function") {
                                         params.callback(
-                                            OauthStorage.accessToken
+                                            await Oauth.storage.get(
+                                                OauthStorageKeys.AccessTokenKey
+                                            )
                                         );
                                     }
                                 } else if (
@@ -797,14 +770,18 @@ export class Oauth {
                  * @param {OauthTokenResponse} token
                  * @param {XMLHttpRequest} xhr
                  * */
-                (token: OauthTokenResponse, xhr: XMLHttpRequest) => {
+                async (token: OauthTokenResponse, xhr: XMLHttpRequest) => {
                     if (OauthUtils.assertAvailable(token)) {
                         if (OauthUtils.assertAvailable(token.accessToken)) {
                             // Save token
-                            this.saveAccess(token);
+                            await this.saveAccess(token);
 
                             if (typeof params.callback === "function") {
-                                params.callback(OauthStorage.accessToken);
+                                params.callback(
+                                    await Oauth.storage.get(
+                                        OauthStorageKeys.AccessTokenKey
+                                    )
+                                );
                             }
                         } else if (OauthUtils.assertAvailable(token.error)) {
                             if (typeof params.callback === "function") {
@@ -847,8 +824,12 @@ export class Oauth {
                 }
             }
         } else {
-            const accessToken = OauthStorage.accessToken;
-            const refreshToken = OauthStorage.refreshToken;
+            const accessToken = await Oauth.storage.get(
+                OauthStorageKeys.AccessTokenKey
+            );
+            const refreshToken = await Oauth.storage.get(
+                OauthStorageKeys.RefreshTokenKey
+            );
             /*Token available, check for refreshing*/
             if (OauthUtils.assertAvailable(accessToken)) {
                 if (!OauthUtils.hasTokenExpired(accessToken)) {
@@ -875,8 +856,10 @@ export class Oauth {
     /**
      * Check if authorization has expired
      */
-    hasExpired() {
-        return OauthUtils.hasTokenExpired(OauthStorage.accessToken);
+    async hasExpired() {
+        return OauthUtils.hasTokenExpired(
+            await Oauth.storage.get(OauthStorageKeys.AccessTokenKey)
+        );
     }
 
     /**
@@ -896,7 +879,7 @@ export class Oauth {
             throw new Error("'redirect_url' Required");
         }
 
-        OauthStorage.set(OauthStorageKeys.CurrentStateKey, state, true);
+        Oauth.storage.set(OauthStorageKeys.CurrentStateKey, state, true);
         const params = {
             client_id: this.clientId,
             scope: scope.join(" "),
@@ -931,7 +914,7 @@ export class Oauth {
             throw new Error("'redirect_url' Required");
         }
 
-        OauthStorage.set(OauthStorageKeys.CurrentStateKey, state, true);
+        Oauth.storage.set(OauthStorageKeys.CurrentStateKey, state, true);
         const params = {
             client_id: this.clientId,
             scope: scope.join(" "),
@@ -969,7 +952,7 @@ export class Oauth {
             throw new Error("'scope' Required");
         }
 
-        OauthStorage.set(OauthStorageKeys.CurrentStateKey, state, true);
+        Oauth.storage.set(OauthStorageKeys.CurrentStateKey, state, true);
         const params = {
             client_id: this.clientId,
             scope: scope.join(" "),
@@ -1181,32 +1164,36 @@ export class Oauth {
             xhr: XMLHttpRequest
         ) => any
     ) {
-        OauthRequest.get({
-            url: this.verifyTokenUrl,
-            accessToken,
-            /**Ajax Response callback
-             * @param {XMLHttpRequest} xhr
-             * */
-            success: (xhr: XMLHttpRequest) => {
-                const verify = OauthResponse.parseVerificationResponse(
-                    xhr.responseText
-                );
-                if (typeof callback === "function") {
-                    callback(verify, xhr);
-                }
-            },
-            /**Ajax Response callback
-             * @param {XMLHttpRequest} xhr
-             * */
-            fail: (xhr: XMLHttpRequest) => {
-                const verify = OauthResponse.parseVerificationResponse(
-                    xhr.responseText
-                );
-                if (typeof callback === "function") {
-                    callback(verify, xhr);
-                }
-            },
-        });
+        if (this.verifyTokenUrl) {
+            OauthRequest.get({
+                url: this.verifyTokenUrl,
+                accessToken,
+                /**Ajax Response callback
+                 * @param {XMLHttpRequest} xhr
+                 * */
+                success: (xhr: XMLHttpRequest) => {
+                    const verify = OauthResponse.parseVerificationResponse(
+                        xhr.responseText
+                    );
+                    if (typeof callback === "function") {
+                        callback(verify, xhr);
+                    }
+                },
+                /**Ajax Response callback
+                 * @param {XMLHttpRequest} xhr
+                 * */
+                fail: (xhr: XMLHttpRequest) => {
+                    const verify = OauthResponse.parseVerificationResponse(
+                        xhr.responseText
+                    );
+                    if (typeof callback === "function") {
+                        callback(verify, xhr);
+                    }
+                },
+            });
+        } else {
+            throw new Error("'verifyTokenUrl' was not specified");
+        }
     }
 }
 
@@ -1481,7 +1468,7 @@ export class OauthVerificationResponse {
     public error: string;
     public errorDescription: string;
 
-    constructor(data: []) {
+    constructor(data?: object) {
         if (!data) return;
         this.success = data["success" as keyof object];
         this.error = data["error" as keyof object];
@@ -1496,7 +1483,7 @@ export class OauthAuthorizationResponse {
     public error: string;
     public errorDescription: string;
 
-    constructor(data: []) {
+    constructor(data?: object) {
         if (!data) return;
         this.state = data["state" as keyof object];
         this.code = data["code" as keyof object];
@@ -1516,7 +1503,7 @@ export class OauthTokenResponse {
     public error: string;
     public errorDescription: string;
 
-    constructor(data: []) {
+    constructor(data?: object) {
         if (!data) return;
         this.accessToken = data["access_token" as keyof object];
         this.refreshToken = data["refresh_token" as keyof object];

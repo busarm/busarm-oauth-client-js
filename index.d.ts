@@ -1,9 +1,9 @@
 /**Store and Retrieve Oauth variables*/
 export interface OauthStorageInterface<T> {
     get(key: string): Promise<T>;
-    set(key: string, value: T): Promise<void>;
+    set(key: string, value: T, temporary?: boolean): Promise<void>;
     remove(key: string): Promise<void>;
-    clearAll(): Promise<void>;
+    clearAll(temporary?: boolean): Promise<void>;
 }
 export declare enum OauthStorageKeys {
     AccessTokenKey = "access_token",
@@ -15,103 +15,88 @@ export declare enum OauthStorageKeys {
 }
 export declare class OauthStorage implements OauthStorageInterface<string> {
     get(key: string): Promise<string>;
-    set(key: string, value: string): Promise<void>;
-    remove(key: string): Promise<any>;
-    clearAll(): Promise<any>;
-    /** Set data - localstorage
-     * @param name  name
-     * @param value  value
-     * */
-    static set(name: string, value: any, temporary?: boolean): void;
-    /** Set data - localStorage
-     * @param name  name
-     * */
-    static get(name: string): string;
-    /** Remove data - localStorage
-     * @param name  string
-     * */
-    static remove(name: string): void;
-    /**Clear all user data*/
-    static clearAll(withTemp?: boolean): void;
-    /**Set Access Token
-     * @param accessToken String
-     * */
-    static set accessToken(accessToken: string);
-    /**Get Access Token
-     * @return String
-     * */
-    static get accessToken(): string;
-    /**Get Refresh Token
-     * @return String
-     * */
-    static get refreshToken(): string;
-    /**Get Access Scope
-     * @return String
-     * */
-    static get accessScope(): string;
-    /**Get Expires In
-     * @return string
-     * */
-    static get expiresIn(): string;
-    /**Get Token Type
-     * @return String
-     * */
-    static get tokenType(): string;
+    set(key: string, value: string, temporary?: boolean): Promise<void>;
+    remove(key: string): Promise<void>;
+    clearAll(temporary?: boolean): Promise<void>;
 }
 /**Common Functions*/
 export declare class OauthUtils {
-    /**Check if token is a JWT token and return claims if so
-     *  @return string
+    /**
+     * Check if token is a JWT token and return claims if so
+     * @return {string}
      * */
     static parseJWT(token: string): string;
-    /**Check if JWT Token has expired
-     *  @return boolean
+    /**
+     * Check if JWT Token has expired
+     * @return {boolean}
      * */
     static hasJWTExpired(token: string): boolean;
-    /**Check if token has expired
-     *  @return boolean
+    /**
+     * Check if token has expired
+     * @return {Promise<boolean>}
      * */
-    static hasTokenExpired(token?: string): boolean;
-    /**Get a safe form of string to store,
+    static hasTokenExpired(token?: string): Promise<boolean>;
+    /**
+     * Get a safe form of string to store,
      * eliminating null and 'undefined'
      * @param item
-     *  @return String*/
+     * @return {string}
+     * */
     static safeString(item: string): string;
-    /**Get a safe form of stIntring to store,
+    /**
+     * Get a safe form of stIntring to store,
      * eliminating null and 'undefined'
      * @param item
-     *  @return int*/
+     * @return {number}
+     * */
     static safeInt(item: number): number;
-    /**Check if item is nut null, undefined or empty
+    /**
+     * Check if item is nut null, undefined or empty
      * eliminating null and 'undefined'
      * @param item
-     *  @return boolean*/
+     * @return {boolean}
+     * */
     static assertAvailable(item: any): boolean;
-    /**Count Object array
-     * @return int*/
+    /**
+     * Count Object array
+     * @return {number}
+     * */
     static count(obj: object): number;
-    /**Merge Object with another*/
+    /**
+     * Merge Object with another
+     * @returns {object}
+     */
     static mergeObj(obj: object, src: object): object;
     /**Encode Object content to url string
      *  @param myData Object
-     *  @return String
+     *  @return {string}
      * */
     static urlEncodeObject(myData: object): string;
     /** Parse Json string to object
      *  @param json string
-     *  @return object
+     *  @return {any}
      *  */
     static parseJson(json: string): any;
-    /**Get Url param
+    /**
+     * Get Url param
      * #source http://www.netlobo.com/url_query_string_javascript.html
-     * */
+     *
+     * @param {string} name
+     * @param {string} url
+     * @returns {string}
+     */
     static getUrlParam(name: string, url?: string): string;
-    /**Return url without it's url parameters
-     * @param url Url to strip
-     * @return string
+    /**
+     * Return url without it's url parameters
+     * @param {string} url Url to strip
+     * @return {string}
      * */
     static stripUrlParams(url: string): string;
-    /**Generate Random value*/
+    /**
+     * Generate Random value
+     * @param {number} length
+     * @return {string}
+     * */
     static generateKey(length: number): string;
 }
 export declare class Oauth {
@@ -120,7 +105,10 @@ export declare class Oauth {
     private readonly authorizeUrl;
     private readonly tokenUrl;
     private readonly verifyTokenUrl;
-    private storage;
+    /**
+     * @var {OauthStorageInterface<string>}
+     */
+    static storage: OauthStorageInterface<string>;
     /**
      * @param {object} data
      * @param {string} data.clientId - Your Application's Client ID
@@ -131,30 +119,20 @@ export declare class Oauth {
      * @param {OauthStorageInterface<string>} data.storage - Handle custom storage - Default storage = browser localStorage or sessionStorage
      * */
     constructor(data: {
-        clientId?: string;
-        clientSecret?: string;
-        authorizeUrl?: string;
-        tokenUrl?: string;
+        clientId: string;
+        clientSecret: string;
+        authorizeUrl: string;
+        tokenUrl: string;
         verifyTokenUrl?: string;
         storage?: OauthStorageInterface<string>;
     });
     /**
-     * Get Oauth Storage
-     * @returns {OauthStorageInterface<string>}
-     */
-    getStorage(): OauthStorageInterface<string>;
-    /**
-     * Set Oauth Storage
-     * @param {OauthStorageInterface<string>} storage
-     */
-    setStorage(storage: OauthStorageInterface<string>): void;
-    /**
      * Save Access data to Local storage
      * @param {OauthTokenResponse} accessData
      * */
-    saveAccess(accessData: OauthTokenResponse): void;
+    saveAccess(accessData: OauthTokenResponse): Promise<[void, void, void, void, void]>;
     /**Clear all access data from session*/
-    clearAccess(): void;
+    clearAccess(): Promise<void>;
     /**
      * Authorize Access to the app
      * @param {object} params
@@ -176,11 +154,11 @@ export declare class Oauth {
         state?: string;
         scope?: string[];
         callback?: (token: string | boolean, msg?: string) => any;
-    }): void;
+    }): Promise<void>;
     /**
      * Check if authorization has expired
      */
-    hasExpired(): boolean;
+    hasExpired(): Promise<boolean>;
     /**
      * Oauth Authorization
      * @param {string[]} scope
@@ -325,7 +303,7 @@ export declare class OauthVerificationResponse {
     success: boolean;
     error: string;
     errorDescription: string;
-    constructor(data: []);
+    constructor(data?: object);
 }
 /**Authorization Response*/
 export declare class OauthAuthorizationResponse {
@@ -333,7 +311,7 @@ export declare class OauthAuthorizationResponse {
     code: string;
     error: string;
     errorDescription: string;
-    constructor(data: []);
+    constructor(data?: object);
 }
 /**Authorization Response*/
 export declare class OauthTokenResponse {
@@ -344,5 +322,5 @@ export declare class OauthTokenResponse {
     expiresIn: number;
     error: string;
     errorDescription: string;
-    constructor(data: []);
+    constructor(data?: object);
 }

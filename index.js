@@ -1,3 +1,36 @@
+var __awaiter =
+  (this && this.__awaiter) ||
+  function (thisArg, _arguments, P, generator) {
+    function adopt(value) {
+      return value instanceof P
+        ? value
+        : new P(function (resolve) {
+            resolve(value);
+          });
+    }
+    return new (P || (P = Promise))(function (resolve, reject) {
+      function fulfilled(value) {
+        try {
+          step(generator.next(value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function rejected(value) {
+        try {
+          step(generator['throw'](value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function step(result) {
+        result.done
+          ? resolve(result.value)
+          : adopt(result.value).then(fulfilled, rejected);
+      }
+      step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+  };
 export var OauthStorageKeys;
 (function (OauthStorageKeys) {
   OauthStorageKeys['AccessTokenKey'] = 'access_token';
@@ -9,177 +42,150 @@ export var OauthStorageKeys;
 })(OauthStorageKeys || (OauthStorageKeys = {}));
 export class OauthStorage {
   get(key) {
-    return new Promise((resolve) => {
-      resolve(OauthStorage.get(key));
+    return new Promise((resolve, reject) => {
+      if (typeof sessionStorage !== 'undefined') {
+        let data = sessionStorage.getItem(key);
+        if (OauthUtils.assertAvailable(data)) {
+          resolve(data);
+        } else {
+          resolve(null);
+        }
+      } else {
+        reject();
+      }
+      if (typeof localStorage !== 'undefined') {
+        let data = localStorage.getItem(key);
+        if (OauthUtils.assertAvailable(data)) {
+          resolve(data);
+        } else {
+          resolve(null);
+        }
+      } else {
+        reject();
+      }
     });
   }
-  set(key, value) {
-    return new Promise((resolve) => {
-      resolve(OauthStorage.set(key, value));
+  set(key, value, temporary = false) {
+    return new Promise((resolve, reject) => {
+      if (temporary) {
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem(key, value);
+          resolve();
+        } else {
+          reject();
+        }
+      } else {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(key, value);
+          resolve();
+        } else {
+          reject();
+        }
+      }
     });
   }
   remove(key) {
     return new Promise((resolve) => {
-      resolve(OauthStorage.remove(key));
-    });
-  }
-  clearAll() {
-    return new Promise((resolve) => {
-      resolve(OauthStorage.clearAll());
-    });
-  }
-  /** Set data - localstorage
-   * @param name  name
-   * @param value  value
-   * */
-  static set(name, value, temporary = false) {
-    if (temporary) {
-      if (typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem(name, value);
-      }
-    } else {
       if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(name, value);
+        localStorage.removeItem(key);
       }
-    }
-  }
-  /** Set data - localStorage
-   * @param name  name
-   * */
-  static get(name) {
-    if (typeof sessionStorage !== 'undefined') {
-      let data = sessionStorage.getItem(name);
-      if (OauthUtils.assertAvailable(data)) {
-        return data;
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.removeItem(key);
       }
-    }
-    if (typeof localStorage !== 'undefined') {
-      let data = localStorage.getItem(name);
-      if (OauthUtils.assertAvailable(data)) {
-        return data;
+      resolve();
+    });
+  }
+  clearAll(temporary = false) {
+    return new Promise((resolve) => {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.clear();
       }
-    }
-    return null;
-  }
-  /** Remove data - localStorage
-   * @param name  string
-   * */
-  static remove(name) {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(name);
-    }
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.removeItem(name);
-    }
-  }
-  /**Clear all user data*/
-  static clearAll(withTemp = false) {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.clear();
-    }
-    if (withTemp && typeof sessionStorage !== 'undefined') {
-      sessionStorage.clear();
-    }
-  }
-  /**Set Access Token
-   * @param accessToken String
-   * */
-  static set accessToken(accessToken) {
-    OauthStorage.set(OauthStorageKeys.AccessTokenKey, accessToken);
-  }
-  /**Get Access Token
-   * @return String
-   * */
-  static get accessToken() {
-    return OauthStorage.get(OauthStorageKeys.AccessTokenKey);
-  }
-  /**Get Refresh Token
-   * @return String
-   * */
-  static get refreshToken() {
-    return OauthStorage.get(OauthStorageKeys.RefreshTokenKey);
-  }
-  /**Get Access Scope
-   * @return String
-   * */
-  static get accessScope() {
-    return OauthStorage.get(OauthStorageKeys.AccessScopeKey);
-  }
-  /**Get Expires In
-   * @return string
-   * */
-  static get expiresIn() {
-    return OauthStorage.get(OauthStorageKeys.ExpiresInKey);
-  }
-  /**Get Token Type
-   * @return String
-   * */
-  static get tokenType() {
-    return OauthStorage.get(OauthStorageKeys.TokenTypeKey);
+      if (temporary && typeof sessionStorage !== 'undefined') {
+        sessionStorage.clear();
+      }
+      resolve();
+    });
   }
 }
 /**Common Functions*/
 export class OauthUtils {
-  /**Check if token is a JWT token and return claims if so
-   *  @return string
+  /**
+   * Check if token is a JWT token and return claims if so
+   * @return {string}
    * */
   static parseJWT(token) {
     let split = token.split('.');
     return split && split.length == 3 ? atob(split[1]) : null;
   }
-  /**Check if JWT Token has expired
-   *  @return boolean
+  /**
+   * Check if JWT Token has expired
+   * @return {boolean}
    * */
   static hasJWTExpired(token) {
     let data = this.parseJson(this.parseJWT(token));
     let exp = data ? data['exp'] : null;
     return exp ? parseInt(exp) < Math.floor(Date.now() / 1000) + 10 : true; // + 10 to account for any network latency
   }
-  /**Check if token has expired
-   *  @return boolean
+  /**
+   * Check if token has expired
+   * @return {Promise<boolean>}
    * */
   static hasTokenExpired(token) {
-    token = token || OauthStorage.accessToken;
-    if (OauthUtils.assertAvailable(token)) {
-      if (OauthUtils.parseJWT(token) && !OauthUtils.hasJWTExpired(token)) {
-        return false;
-      } else if (OauthUtils.assertAvailable(OauthStorage.expiresIn)) {
-        return (
-          parseInt(OauthStorage.expiresIn) < Math.floor(Date.now() / 1000) + 10
-        ); // + 10 to account for any network latency
+    return __awaiter(this, void 0, void 0, function* () {
+      token =
+        token || (yield Oauth.storage.get(OauthStorageKeys.AccessTokenKey));
+      if (OauthUtils.assertAvailable(token)) {
+        if (OauthUtils.parseJWT(token) && !OauthUtils.hasJWTExpired(token)) {
+          return false;
+        } else {
+          let expiresIn = yield Oauth.storage.get(
+            OauthStorageKeys.ExpiresInKey
+          );
+          if (OauthUtils.assertAvailable(expiresIn)) {
+            return parseInt(expiresIn) < Math.floor(Date.now() / 1000) + 10; // + 10 to account for any network latency
+          }
+        }
       }
-    }
-    return true;
+      return true;
+    });
   }
-  /**Get a safe form of string to store,
+  /**
+   * Get a safe form of string to store,
    * eliminating null and 'undefined'
    * @param item
-   *  @return String*/
+   * @return {string}
+   * */
   static safeString(item) {
     if (OauthUtils.assertAvailable(item)) {
       return item;
     }
     return '';
   }
-  /**Get a safe form of stIntring to store,
+  /**
+   * Get a safe form of stIntring to store,
    * eliminating null and 'undefined'
    * @param item
-   *  @return int*/
+   * @return {number}
+   * */
   static safeInt(item) {
     if (OauthUtils.assertAvailable(item)) {
       return item;
     }
     return 0;
   }
-  /**Check if item is nut null, undefined or empty
+  /**
+   * Check if item is nut null, undefined or empty
    * eliminating null and 'undefined'
    * @param item
-   *  @return boolean*/
+   * @return {boolean}
+   * */
   static assertAvailable(item) {
     return item != null && typeof item !== 'undefined' && item !== '';
   }
-  /**Count Object array
-   * @return int*/
+  /**
+   * Count Object array
+   * @return {number}
+   * */
   static count(obj) {
     let element_count = 0;
     for (const i in obj) {
@@ -189,7 +195,10 @@ export class OauthUtils {
     }
     return element_count;
   }
-  /**Merge Object with another*/
+  /**
+   * Merge Object with another
+   * @returns {object}
+   */
   static mergeObj(obj, src) {
     Object.keys(src).forEach((key) => {
       if (src.hasOwnProperty(key)) {
@@ -204,7 +213,7 @@ export class OauthUtils {
   }
   /**Encode Object content to url string
    *  @param myData Object
-   *  @return String
+   *  @return {string}
    * */
   static urlEncodeObject(myData) {
     const encodeObj = (data, key, parent) => {
@@ -261,7 +270,7 @@ export class OauthUtils {
   }
   /** Parse Json string to object
    *  @param json string
-   *  @return object
+   *  @return {any}
    *  */
   static parseJson(json) {
     try {
@@ -270,9 +279,14 @@ export class OauthUtils {
       return null;
     }
   }
-  /**Get Url param
+  /**
+   * Get Url param
    * #source http://www.netlobo.com/url_query_string_javascript.html
-   * */
+   *
+   * @param {string} name
+   * @param {string} url
+   * @returns {string}
+   */
   static getUrlParam(name, url) {
     if (!url) {
       url = location.href;
@@ -284,9 +298,10 @@ export class OauthUtils {
     const results = regex.exec(url);
     return results == null ? null : results[1];
   }
-  /**Return url without it's url parameters
-   * @param url Url to strip
-   * @return string
+  /**
+   * Return url without it's url parameters
+   * @param {string} url Url to strip
+   * @return {string}
    * */
   static stripUrlParams(url) {
     if (OauthUtils.assertAvailable(url)) {
@@ -295,7 +310,11 @@ export class OauthUtils {
       return url;
     }
   }
-  /**Generate Random value*/
+  /**
+   * Generate Random value
+   * @param {number} length
+   * @return {string}
+   * */
   static generateKey(length) {
     if (!OauthUtils.assertAvailable(length)) {
       length = 16;
@@ -342,65 +361,57 @@ export class Oauth {
     }
     if (OauthUtils.assertAvailable(data.verifyTokenUrl)) {
       this.verifyTokenUrl = data.verifyTokenUrl;
-    } else {
-      throw new Error("'verifyTokenUrl' Required");
     }
     if (OauthUtils.assertAvailable(data.storage)) {
-      this.storage = data.storage;
-    } else {
-      this.storage = new OauthStorage();
+      Oauth.storage = data.storage;
     }
-  }
-  /**
-   * Get Oauth Storage
-   * @returns {OauthStorageInterface<string>}
-   */
-  getStorage() {
-    return this.storage;
-  }
-  /**
-   * Set Oauth Storage
-   * @param {OauthStorageInterface<string>} storage
-   */
-  setStorage(storage) {
-    this.storage = storage;
   }
   /**
    * Save Access data to Local storage
    * @param {OauthTokenResponse} accessData
    * */
   saveAccess(accessData) {
-    this.storage.set(
-      OauthStorageKeys.AccessTokenKey,
-      OauthUtils.safeString(accessData.accessToken)
-    );
-    this.storage.set(
-      OauthStorageKeys.RefreshTokenKey,
-      OauthUtils.safeString(accessData.refreshToken)
-    );
-    this.storage.set(
-      OauthStorageKeys.AccessScopeKey,
-      OauthUtils.safeString(accessData.accessScope)
-    );
-    this.storage.set(
-      OauthStorageKeys.TokenTypeKey,
-      OauthUtils.safeString(accessData.tokenType)
-    );
-    this.storage.set(
-      OauthStorageKeys.ExpiresInKey,
-      String(
-        OauthUtils.safeInt(Math.floor(Date.now() / 1000) + accessData.expiresIn)
-      )
-    );
+    return __awaiter(this, void 0, void 0, function* () {
+      return Promise.all([
+        Oauth.storage.set(
+          OauthStorageKeys.AccessTokenKey,
+          OauthUtils.safeString(accessData.accessToken)
+        ),
+        Oauth.storage.set(
+          OauthStorageKeys.RefreshTokenKey,
+          OauthUtils.safeString(accessData.refreshToken)
+        ),
+        Oauth.storage.set(
+          OauthStorageKeys.AccessScopeKey,
+          OauthUtils.safeString(accessData.accessScope)
+        ),
+        Oauth.storage.set(
+          OauthStorageKeys.TokenTypeKey,
+          OauthUtils.safeString(accessData.tokenType)
+        ),
+        Oauth.storage.set(
+          OauthStorageKeys.ExpiresInKey,
+          String(
+            OauthUtils.safeInt(
+              Math.floor(Date.now() / 1000) + accessData.expiresIn
+            )
+          )
+        ),
+      ]);
+    });
   }
   /**Clear all access data from session*/
   clearAccess() {
-    this.storage.remove(OauthStorageKeys.AccessTokenKey);
-    this.storage.remove(OauthStorageKeys.RefreshTokenKey);
-    this.storage.remove(OauthStorageKeys.AccessScopeKey);
-    this.storage.remove(OauthStorageKeys.TokenTypeKey);
-    this.storage.remove(OauthStorageKeys.ExpiresInKey);
-    this.storage.remove(OauthStorageKeys.CurrentStateKey);
+    return __awaiter(this, void 0, void 0, function* () {
+      Promise.all([
+        Oauth.storage.remove(OauthStorageKeys.AccessTokenKey),
+        Oauth.storage.remove(OauthStorageKeys.RefreshTokenKey),
+        Oauth.storage.remove(OauthStorageKeys.AccessScopeKey),
+        Oauth.storage.remove(OauthStorageKeys.TokenTypeKey),
+        Oauth.storage.remove(OauthStorageKeys.ExpiresInKey),
+        Oauth.storage.remove(OauthStorageKeys.CurrentStateKey),
+      ]);
+    });
   }
   /**
    * Authorize Access to the app
@@ -414,155 +425,260 @@ export class Oauth {
    * @param {(token: string | boolean, msg?: string)} params.callback
    * */
   authorizeAccess(params) {
-    let grant_type = OauthUtils.assertAvailable(params.grant_type)
-      ? params.grant_type
-      : OauthGrantType.Client_Credentials;
-    const allowed_grant_types = OauthUtils.assertAvailable(
-      params.allowed_grant_types
-    )
-      ? params.allowed_grant_types
-      : [];
-    const redirect_uri = OauthUtils.assertAvailable(params.redirect_uri)
-      ? params.redirect_uri
-      : OauthUtils.stripUrlParams(location.origin);
-    const scope = OauthUtils.assertAvailable(params.scope) ? params.scope : [];
-    let state = OauthUtils.assertAvailable(params.state)
-      ? params.state
-      : OauthUtils.generateKey(32);
-    /**Get New Token
-     * */
-    const getNewOauthToken = () => {
-      switch (grant_type) {
-        case OauthGrantType.Auto:
-          if (
-            OauthUtils.assertAvailable(params.user_id) ||
-            OauthUtils.assertAvailable(OauthUtils.getUrlParam('code'))
-          ) {
-            // if authorization code exists in url param
-            grant_type = OauthGrantType.Authorization_Code;
-            if (allowed_grant_types.includes(grant_type)) {
-              getNewOauthToken();
-            } else {
-              params.callback(false);
-            }
-          } else if (
-            OauthUtils.assertAvailable(params.username) &&
-            OauthUtils.assertAvailable(params.password)
-          ) {
-            grant_type = OauthGrantType.User_Credentials;
-            if (allowed_grant_types.includes(grant_type)) {
-              getNewOauthToken();
-            } else {
-              params.callback(false);
-            }
-          } else {
-            grant_type = OauthGrantType.Client_Credentials;
-            if (allowed_grant_types.includes(grant_type)) {
-              getNewOauthToken();
-            } else {
-              params.callback(false);
-            }
-          }
-          break;
-        case OauthGrantType.Authorization_Code:
-          const code = OauthUtils.getUrlParam('code');
-          const error = OauthUtils.getUrlParam('error');
-          const error_description = OauthUtils.getUrlParam('error_description');
-          if (OauthUtils.assertAvailable(code)) {
-            const save_state = OauthStorage.get(
-              OauthStorageKeys.CurrentStateKey
-            );
-            state = OauthUtils.assertAvailable(save_state) ? save_state : state;
-            if (state === OauthUtils.getUrlParam('state')) {
+    return __awaiter(this, void 0, void 0, function* () {
+      let grant_type = OauthUtils.assertAvailable(params.grant_type)
+        ? params.grant_type
+        : OauthGrantType.Client_Credentials;
+      const allowed_grant_types = OauthUtils.assertAvailable(
+        params.allowed_grant_types
+      )
+        ? params.allowed_grant_types
+        : [];
+      const redirect_uri = OauthUtils.assertAvailable(params.redirect_uri)
+        ? params.redirect_uri
+        : OauthUtils.stripUrlParams(location.origin);
+      const scope = OauthUtils.assertAvailable(params.scope)
+        ? params.scope
+        : [];
+      let state = OauthUtils.assertAvailable(params.state)
+        ? params.state
+        : OauthUtils.generateKey(32);
+      /**Get New Token
+       * */
+      const getNewOauthToken = () =>
+        __awaiter(this, void 0, void 0, function* () {
+          switch (grant_type) {
+            case OauthGrantType.Auto:
+              if (
+                OauthUtils.assertAvailable(params.user_id) ||
+                OauthUtils.assertAvailable(OauthUtils.getUrlParam('code'))
+              ) {
+                // if authorization code exists in url param
+                grant_type = OauthGrantType.Authorization_Code;
+                if (allowed_grant_types.includes(grant_type)) {
+                  getNewOauthToken();
+                } else {
+                  params.callback(false);
+                }
+              } else if (
+                OauthUtils.assertAvailable(params.username) &&
+                OauthUtils.assertAvailable(params.password)
+              ) {
+                grant_type = OauthGrantType.User_Credentials;
+                if (allowed_grant_types.includes(grant_type)) {
+                  getNewOauthToken();
+                } else {
+                  params.callback(false);
+                }
+              } else {
+                grant_type = OauthGrantType.Client_Credentials;
+                if (allowed_grant_types.includes(grant_type)) {
+                  getNewOauthToken();
+                } else {
+                  params.callback(false);
+                }
+              }
+              break;
+            case OauthGrantType.Authorization_Code:
+              const code = OauthUtils.getUrlParam('code');
+              const error = OauthUtils.getUrlParam('error');
+              const error_description =
+                OauthUtils.getUrlParam('error_description');
+              if (OauthUtils.assertAvailable(code)) {
+                const save_state = yield Oauth.storage.get(
+                  OauthStorageKeys.CurrentStateKey
+                );
+                state = OauthUtils.assertAvailable(save_state)
+                  ? save_state
+                  : state;
+                if (state === OauthUtils.getUrlParam('state')) {
+                  // Get token
+                  this.oauthTokenWithAuthorizationCode(
+                    code,
+                    redirect_uri,
+                    /**
+                     * Ajax Response callback
+                     * @param {OauthTokenResponse} token
+                     * @param {XMLHttpRequest} xhr
+                     * */
+                    (token, xhr) =>
+                      __awaiter(this, void 0, void 0, function* () {
+                        if (OauthUtils.assertAvailable(token)) {
+                          if (OauthUtils.assertAvailable(token.accessToken)) {
+                            // Remove oauth state
+                            Oauth.storage.remove(
+                              OauthStorageKeys.CurrentStateKey
+                            );
+                            // Save token
+                            yield this.saveAccess(token);
+                            if (typeof params.callback === 'function') {
+                              params.callback(
+                                yield Oauth.storage.get(
+                                  OauthStorageKeys.AccessTokenKey
+                                )
+                              );
+                            }
+                            // Remove authorization code from url
+                            location.replace(
+                              OauthUtils.stripUrlParams(window.location.href)
+                            );
+                          } else if (OauthUtils.assertAvailable(token.error)) {
+                            if (typeof params.callback === 'function') {
+                              params.callback(false, token.errorDescription);
+                            }
+                          } else {
+                            if (typeof params.callback === 'function') {
+                              params.callback(false);
+                            }
+                          }
+                        } else {
+                          if (typeof params.callback === 'function') {
+                            params.callback(false);
+                          }
+                        }
+                      })
+                  );
+                } else {
+                  if (typeof params.callback === 'function') {
+                    params.callback(
+                      false,
+                      'Failed authorize access. CSRF Verification Failed'
+                    );
+                  }
+                }
+              } else if (OauthUtils.assertAvailable(error)) {
+                // Remove oauth state
+                Oauth.storage.remove(OauthStorageKeys.CurrentStateKey);
+                if (OauthUtils.assertAvailable(error_description)) {
+                  if (typeof params.callback === 'function') {
+                    params.callback(false, error_description);
+                  }
+                } else {
+                  if (typeof params.callback === 'function') {
+                    params.callback(false, 'Failed authorize access');
+                  }
+                }
+              } else {
+                // Get authorization code
+                this.oauthAuthorize(scope, redirect_uri, params.user_id, state);
+              }
+              break;
+            case OauthGrantType.User_Credentials:
               // Get token
-              this.oauthTokenWithAuthorizationCode(
-                code,
-                redirect_uri,
+              this.oauthTokenWithUserCredentials(
+                params.username,
+                params.password,
+                scope,
                 /**
                  * Ajax Response callback
                  * @param {OauthTokenResponse} token
                  * @param {XMLHttpRequest} xhr
                  * */
-                (token, xhr) => {
-                  if (OauthUtils.assertAvailable(token)) {
-                    if (OauthUtils.assertAvailable(token.accessToken)) {
-                      // Remove instance ID
-                      OauthStorage.remove(OauthStorageKeys.CurrentStateKey);
-                      // Save token
-                      this.saveAccess(token);
-                      if (typeof params.callback === 'function') {
-                        params.callback(OauthStorage.accessToken);
-                      }
-                      // Remove authorization code from url
-                      location.replace(
-                        OauthUtils.stripUrlParams(window.location.href)
-                      );
-                    } else if (OauthUtils.assertAvailable(token.error)) {
-                      if (typeof params.callback === 'function') {
-                        params.callback(false, token.errorDescription);
+                (token, xhr) =>
+                  __awaiter(this, void 0, void 0, function* () {
+                    if (OauthUtils.assertAvailable(token)) {
+                      if (OauthUtils.assertAvailable(token.accessToken)) {
+                        // Save token
+                        yield this.saveAccess(token);
+                        if (typeof params.callback === 'function') {
+                          params.callback(
+                            yield Oauth.storage.get(
+                              OauthStorageKeys.AccessTokenKey
+                            )
+                          );
+                        }
+                      } else if (OauthUtils.assertAvailable(token.error)) {
+                        if (typeof params.callback === 'function') {
+                          params.callback(false, token.errorDescription);
+                        }
+                      } else {
+                        if (typeof params.callback === 'function') {
+                          params.callback(false);
+                        }
                       }
                     } else {
                       if (typeof params.callback === 'function') {
                         params.callback(false);
                       }
                     }
-                  } else {
-                    if (typeof params.callback === 'function') {
-                      params.callback(false);
-                    }
-                  }
-                }
+                  })
               );
-            } else {
-              if (typeof params.callback === 'function') {
-                params.callback(
-                  false,
-                  'Failed authorize access. CSRF Verification Failed'
-                );
-              }
-            }
-          } else if (OauthUtils.assertAvailable(error)) {
-            // Remove oauth state
-            OauthStorage.remove(OauthStorageKeys.CurrentStateKey);
-            if (OauthUtils.assertAvailable(error_description)) {
-              if (typeof params.callback === 'function') {
-                params.callback(false, error_description);
-              }
-            } else {
-              if (typeof params.callback === 'function') {
-                params.callback(false, 'Failed authorize access');
-              }
-            }
-          } else {
-            // Get authorization code
-            this.oauthAuthorize(scope, redirect_uri, params.user_id, state);
+              break;
+            case OauthGrantType.Client_Credentials:
+            default:
+              // Get token
+              this.oauthTokenWithClientCredentials(
+                scope,
+                /**
+                 * Ajax Response callback
+                 * @param {OauthTokenResponse} token
+                 * @param {XMLHttpRequest} xhr
+                 * */
+                (token, xhr) =>
+                  __awaiter(this, void 0, void 0, function* () {
+                    if (OauthUtils.assertAvailable(token)) {
+                      if (OauthUtils.assertAvailable(token.accessToken)) {
+                        // Save token
+                        yield this.saveAccess(token);
+                        if (typeof params.callback === 'function') {
+                          params.callback(
+                            yield Oauth.storage.get(
+                              OauthStorageKeys.AccessTokenKey
+                            )
+                          );
+                        }
+                      } else if (OauthUtils.assertAvailable(token.error)) {
+                        if (typeof params.callback === 'function') {
+                          params.callback(false, token.errorDescription);
+                        }
+                      } else {
+                        if (typeof params.callback === 'function') {
+                          params.callback(false);
+                        }
+                      }
+                    } else {
+                      if (typeof params.callback === 'function') {
+                        params.callback(false);
+                      }
+                    }
+                  })
+              );
+              break;
           }
-          break;
-        case OauthGrantType.User_Credentials:
-          // Get token
-          this.oauthTokenWithUserCredentials(
-            params.username,
-            params.password,
-            scope,
-            /**
-             * Ajax Response callback
-             * @param {OauthTokenResponse} token
-             * @param {XMLHttpRequest} xhr
-             * */
-            (token, xhr) => {
+        });
+      /**Refresh Existing Token
+       * @param refreshToken String
+       * */
+      const refreshOauthToken = (refreshToken) => {
+        this.oauthRefreshToken(
+          refreshToken,
+          /**
+           * Ajax Response callback
+           * @param {OauthTokenResponse} token
+           * @param {XMLHttpRequest} xhr
+           * */
+          (token, xhr) =>
+            __awaiter(this, void 0, void 0, function* () {
               if (OauthUtils.assertAvailable(token)) {
                 if (OauthUtils.assertAvailable(token.accessToken)) {
                   // Save token
-                  this.saveAccess(token);
+                  yield this.saveAccess(token);
                   if (typeof params.callback === 'function') {
-                    params.callback(OauthStorage.accessToken);
+                    params.callback(
+                      yield Oauth.storage.get(OauthStorageKeys.AccessTokenKey)
+                    );
                   }
                 } else if (OauthUtils.assertAvailable(token.error)) {
                   if (typeof params.callback === 'function') {
                     params.callback(false, token.errorDescription);
+                    // Clear token
+                    this.clearAccess();
+                    getNewOauthToken();
                   }
                 } else {
                   if (typeof params.callback === 'function') {
+                    // Clear token
+                    this.clearAccess();
                     params.callback(false);
                   }
                 }
@@ -571,130 +687,61 @@ export class Oauth {
                   params.callback(false);
                 }
               }
-            }
-          );
-          break;
-        case OauthGrantType.Client_Credentials:
-        default:
-          // Get token
-          this.oauthTokenWithClientCredentials(
-            scope,
-            /**
-             * Ajax Response callback
-             * @param {OauthTokenResponse} token
-             * @param {XMLHttpRequest} xhr
-             * */
-            (token, xhr) => {
-              if (OauthUtils.assertAvailable(token)) {
-                if (OauthUtils.assertAvailable(token.accessToken)) {
-                  // Save token
-                  this.saveAccess(token);
-                  if (typeof params.callback === 'function') {
-                    params.callback(OauthStorage.accessToken);
-                  }
-                } else if (OauthUtils.assertAvailable(token.error)) {
-                  if (typeof params.callback === 'function') {
-                    params.callback(false, token.errorDescription);
-                  }
-                } else {
-                  if (typeof params.callback === 'function') {
-                    params.callback(false);
-                  }
-                }
-              } else {
-                if (typeof params.callback === 'function') {
-                  params.callback(false);
-                }
-              }
-            }
-          );
-          break;
-      }
-    };
-    /**Refresh Existing Token
-     * @param refreshToken String
-     * */
-    const refreshOauthToken = (refreshToken) => {
-      this.oauthRefreshToken(
-        refreshToken,
-        /**
-         * Ajax Response callback
-         * @param {OauthTokenResponse} token
-         * @param {XMLHttpRequest} xhr
-         * */
-        (token, xhr) => {
-          if (OauthUtils.assertAvailable(token)) {
-            if (OauthUtils.assertAvailable(token.accessToken)) {
-              // Save token
-              this.saveAccess(token);
-              if (typeof params.callback === 'function') {
-                params.callback(OauthStorage.accessToken);
-              }
-            } else if (OauthUtils.assertAvailable(token.error)) {
-              if (typeof params.callback === 'function') {
-                params.callback(false, token.errorDescription);
-                // Clear token
-                this.clearAccess();
-                getNewOauthToken();
-              }
-            } else {
-              if (typeof params.callback === 'function') {
-                // Clear token
-                this.clearAccess();
-                params.callback(false);
-              }
-            }
-          } else {
-            if (typeof params.callback === 'function') {
-              params.callback(false);
-            }
-          }
-        }
-      );
-    };
-    if (OauthUtils.assertAvailable(OauthUtils.getUrlParam('access_token'))) {
-      const accessToken = OauthUtils.getUrlParam('access_token');
-      if (!OauthUtils.hasTokenExpired(accessToken)) {
-        if (typeof params.callback === 'function') {
-          params.callback(
-            OauthUtils.assertAvailable(accessToken) ? accessToken : true
-          );
-        }
-      } else {
-        if (typeof params.callback === 'function') {
-          params.callback(false);
-        }
-      }
-    } else {
-      const accessToken = OauthStorage.accessToken;
-      const refreshToken = OauthStorage.refreshToken;
-      /*Token available, check for refreshing*/
-      if (OauthUtils.assertAvailable(accessToken)) {
+            })
+        );
+      };
+      if (OauthUtils.assertAvailable(OauthUtils.getUrlParam('access_token'))) {
+        const accessToken = OauthUtils.getUrlParam('access_token');
         if (!OauthUtils.hasTokenExpired(accessToken)) {
           if (typeof params.callback === 'function') {
-            params.callback(accessToken);
+            params.callback(
+              OauthUtils.assertAvailable(accessToken) ? accessToken : true
+            );
           }
         } else {
-          // Expired - get refresh token
-          if (OauthUtils.assertAvailable(refreshToken)) {
-            // Try Refresh token
-            refreshOauthToken(refreshToken);
-          } else {
-            // No refresh token get new token
-            getNewOauthToken();
+          if (typeof params.callback === 'function') {
+            params.callback(false);
           }
         }
       } else {
-        // No token - get new token
-        getNewOauthToken();
+        const accessToken = yield Oauth.storage.get(
+          OauthStorageKeys.AccessTokenKey
+        );
+        const refreshToken = yield Oauth.storage.get(
+          OauthStorageKeys.RefreshTokenKey
+        );
+        /*Token available, check for refreshing*/
+        if (OauthUtils.assertAvailable(accessToken)) {
+          if (!OauthUtils.hasTokenExpired(accessToken)) {
+            if (typeof params.callback === 'function') {
+              params.callback(accessToken);
+            }
+          } else {
+            // Expired - get refresh token
+            if (OauthUtils.assertAvailable(refreshToken)) {
+              // Try Refresh token
+              refreshOauthToken(refreshToken);
+            } else {
+              // No refresh token get new token
+              getNewOauthToken();
+            }
+          }
+        } else {
+          // No token - get new token
+          getNewOauthToken();
+        }
       }
-    }
+    });
   }
   /**
    * Check if authorization has expired
    */
   hasExpired() {
-    return OauthUtils.hasTokenExpired(OauthStorage.accessToken);
+    return __awaiter(this, void 0, void 0, function* () {
+      return OauthUtils.hasTokenExpired(
+        yield Oauth.storage.get(OauthStorageKeys.AccessTokenKey)
+      );
+    });
   }
   /**
    * Oauth Authorization
@@ -707,7 +754,7 @@ export class Oauth {
     if (!OauthUtils.assertAvailable(redirect_url)) {
       throw new Error("'redirect_url' Required");
     }
-    OauthStorage.set(OauthStorageKeys.CurrentStateKey, state, true);
+    Oauth.storage.set(OauthStorageKeys.CurrentStateKey, state, true);
     const params = {
       client_id: this.clientId,
       scope: scope.join(' '),
@@ -731,7 +778,7 @@ export class Oauth {
     if (!OauthUtils.assertAvailable(redirect_url)) {
       throw new Error("'redirect_url' Required");
     }
-    OauthStorage.set(OauthStorageKeys.CurrentStateKey, state, true);
+    Oauth.storage.set(OauthStorageKeys.CurrentStateKey, state, true);
     const params = {
       client_id: this.clientId,
       scope: scope.join(' '),
@@ -758,7 +805,7 @@ export class Oauth {
     if (!OauthUtils.assertAvailable(scope)) {
       throw new Error("'scope' Required");
     }
-    OauthStorage.set(OauthStorageKeys.CurrentStateKey, state, true);
+    Oauth.storage.set(OauthStorageKeys.CurrentStateKey, state, true);
     const params = {
       client_id: this.clientId,
       scope: scope.join(' '),
@@ -925,34 +972,42 @@ export class Oauth {
    * @param callback function
    * */
   oauthVerifyToken(accessToken, callback) {
-    OauthRequest.get({
-      url: this.verifyTokenUrl,
-      accessToken,
-      /**Ajax Response callback
-       * @param {XMLHttpRequest} xhr
-       * */
-      success: (xhr) => {
-        const verify = OauthResponse.parseVerificationResponse(
-          xhr.responseText
-        );
-        if (typeof callback === 'function') {
-          callback(verify, xhr);
-        }
-      },
-      /**Ajax Response callback
-       * @param {XMLHttpRequest} xhr
-       * */
-      fail: (xhr) => {
-        const verify = OauthResponse.parseVerificationResponse(
-          xhr.responseText
-        );
-        if (typeof callback === 'function') {
-          callback(verify, xhr);
-        }
-      },
-    });
+    if (this.verifyTokenUrl) {
+      OauthRequest.get({
+        url: this.verifyTokenUrl,
+        accessToken,
+        /**Ajax Response callback
+         * @param {XMLHttpRequest} xhr
+         * */
+        success: (xhr) => {
+          const verify = OauthResponse.parseVerificationResponse(
+            xhr.responseText
+          );
+          if (typeof callback === 'function') {
+            callback(verify, xhr);
+          }
+        },
+        /**Ajax Response callback
+         * @param {XMLHttpRequest} xhr
+         * */
+        fail: (xhr) => {
+          const verify = OauthResponse.parseVerificationResponse(
+            xhr.responseText
+          );
+          if (typeof callback === 'function') {
+            callback(verify, xhr);
+          }
+        },
+      });
+    } else {
+      throw new Error("'verifyTokenUrl' was not specified");
+    }
   }
 }
+/**
+ * @var {OauthStorageInterface<string>}
+ */
+Oauth.storage = new OauthStorage();
 /**Grant Types*/
 export var OauthGrantType;
 (function (OauthGrantType) {
