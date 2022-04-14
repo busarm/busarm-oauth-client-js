@@ -18,9 +18,6 @@
   "bugs": {
     "url": "https://github.com/Busarm/busarm-oauth-client-js/issues"
   },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
-  },
   "scripts": {
     "test": "mocha --recursive --exit"
   },
