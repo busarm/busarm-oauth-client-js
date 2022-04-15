@@ -40,7 +40,7 @@ export var OauthStorageKeys;
 })(OauthStorageKeys || (OauthStorageKeys = {}));
 export class OauthStorage {
   get(s) {
-    return new Promise((t, e) => {
+    return new Promise((t) => {
       if (typeof localStorage !== 'undefined') {
         let e = localStorage.getItem(s);
         if (OauthUtils.assertAvailable(e)) {
@@ -101,7 +101,7 @@ export class OauthStorage {
 export class OauthUtils {
   static parseJWT(e) {
     let t = e.split('.');
-    return t && t.length == 3 ? atob(t[1]) : null;
+    return t && t.length == 3 ? Buffer.from(t[1]).toString('base64') : null;
   }
   static hasJWTExpired(e) {
     let t = this.parseJson(this.parseJWT(e));

@@ -1,5 +1,5 @@
 // Requiring module
-import { doesNotReject, doesNotThrow, equal, notEqual, ok, rejects } from "assert";
+import { doesNotReject, equal, notEqual, ok, rejects } from "assert";
 import { Oauth } from "../index.js";
 
 describe("Test Features", () => {

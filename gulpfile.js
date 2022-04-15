@@ -1,8 +1,8 @@
-const { src, dest, watch, series, parallel } = require("gulp");
-const rename = require("gulp-rename");
-const uglify = require("gulp-uglify");
-const prettier = require("gulp-prettier");
-const ts = require("gulp-typescript");
+import gulp from "gulp";
+import rename from "gulp-rename";
+import uglify from "gulp-uglify";
+import prettier from "gulp-prettier";
+import ts from "gulp-typescript";
 
 // TS configuration
 var tsProject = ts.createProject({
@@ -14,19 +14,19 @@ var tsProject = ts.createProject({
     noEmitOnError: false,
 });
 const tsFormatterTask = function () {
-    return src("index.ts")
+    return gulp.src("index.ts")
         .pipe(prettier({ singleQuote: true, tabWidth: 4 }))
         .pipe(
-            dest(function (f) {
+            gulp.dest(function (f) {
                 return f.base;
             })
         );
 };
 const tsTask = function () {
-    return src("index.ts")
+    return gulp.src("index.ts")
         .pipe(tsProject())
         .pipe(
-            dest(function (f) {
+            gulp.dest(function (f) {
                 return f.base;
             })
         );
@@ -34,16 +34,16 @@ const tsTask = function () {
 
 // JS configuration
 const jsFormatterTask = function () {
-    return src("index.js")
+    return gulp.src("index.js")
         .pipe(prettier({ singleQuote: true, tabWidth: 4 }))
         .pipe(
-            dest(function (f) {
+            gulp.dest(function (f) {
                 return f.base;
             })
         );
 };
 const jsTask = function () {
-    return src("index.js")
+    return gulp.src("index.js")
         .pipe(uglify({ mangle: true, compress: false }))
         .pipe(prettier({ singleQuote: true }))
         .pipe(
@@ -51,31 +51,32 @@ const jsTask = function () {
                 basename: "busarm-oauth",
             })
         )
-        .pipe(dest("dist/"))
+        .pipe(gulp.dest("dist/"))
         .pipe(uglify({ mangle: true, compress: true }))
         .pipe(
             rename({
                 basename: "busarm-oauth.min",
             })
         )
-        .pipe(dest("dist/"));
+        .pipe(gulp.dest("dist/"));
 };
 
 // Watcher configuration
 const watcherTask = function () {
-    watch(
+    gulp.watch(
         ["index.ts"],
         {
             ignoreInitial: true,
         },
-        series(tsTask, jsFormatterTask, jsTask)
+        gulp.series(tsTask, jsFormatterTask, jsTask)
     );
 };
 
-exports.default = series(
+const _default = gulp.series(
     tsFormatterTask,
     tsTask,
     jsFormatterTask,
     jsTask,
     watcherTask
 );
+export { _default as default };
