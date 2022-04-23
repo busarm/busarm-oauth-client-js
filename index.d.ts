@@ -1,16 +1,48 @@
 /**Store and Retrieve Oauth variables*/
 export interface OauthStorageInterface<T> {
+    /**
+     * Get Item from storage
+     * @param {String} key
+     * @returns {Promise<T>}
+     */
     get(key: string): Promise<T>;
+    /**
+     * Set Item to storage
+     * @param {String} key
+     * @param {T} value
+     * @param {Boolean} temporary
+     * @returns {Promise<void>}
+     */
     set(key: string, value: T, temporary?: boolean): Promise<void>;
+    /**
+     * Remove Item from storage
+     * @param {String} key
+     * @returns {Promise<void>}
+     */
     remove(key: string): Promise<void>;
+    /**
+     * Clear all items from storage
+     * @param {Boolean} temporary
+     * @returns {Promise<void>}
+     */
     clearAll(temporary?: boolean): Promise<void>;
 }
+/**
+ * Oauth Storage Keys
+ * @enum
+ */
 export declare enum OauthStorageKeys {
+    /** @type {String} */
     AccessTokenKey = "access_token",
+    /** @type {String} */
     RefreshTokenKey = "refresh_token",
+    /** @type {String} */
     AccessScopeKey = "scope",
+    /** @type {String} */
     TokenTypeKey = "token_type",
+    /** @type {String} */
     ExpiresInKey = "expires_in",
+    /** @type {String} */
     CurrentStateKey = "current_state"
 }
 export declare class OauthStorage implements OauthStorageInterface<string> {
@@ -23,57 +55,56 @@ export declare class OauthStorage implements OauthStorageInterface<string> {
 export declare class OauthUtils {
     /**
      * Check if token is a JWT token and return claims if so
-     * @return {string}
+     * @return {String}
      * */
     static parseJWT(token: string): string;
     /**
      * Check if JWT Token has expired
+     * @param {String} token
      * @return {boolean}
      * */
     static hasJWTExpired(token: string): boolean;
     /**
-     * Check if token has expired
-     * @return {Promise<boolean>}
-     * */
-    static hasTokenExpired(token?: string): Promise<boolean>;
-    /**
      * Get a safe form of string to store,
      * eliminating null and 'undefined'
-     * @param item
-     * @return {string}
+     * @param {String} item
+     * @return {String}
      * */
     static safeString(item: string): string;
     /**
      * Get a safe form of stIntring to store,
      * eliminating null and 'undefined'
-     * @param item
-     * @return {number}
+     * @param {Number} item
+     * @return {Number}
      * */
     static safeInt(item: number): number;
     /**
      * Check if item is nut null, undefined or empty
      * eliminating null and 'undefined'
-     * @param item
+     * @param {any} item
      * @return {boolean}
      * */
     static assertAvailable(item: any): boolean;
     /**
      * Count Object array
-     * @return {number}
+     * @param {Object} obj
+     * @return {Number}
      * */
     static count(obj: object): number;
     /**
      * Merge Object with another
-     * @returns {object}
+     * @param {Object} obj
+     * @param {Object} src
+     * @returns {Object}
      */
     static mergeObj(obj: object, src: object): object;
     /**Encode Object content to url string
-     *  @param myData Object
-     *  @return {string}
+     *  @param {Object} myData Object
+     *  @return {String}
      * */
     static urlEncodeObject(myData: object): string;
     /** Parse Json string to object
-     *  @param json string
+     *  @param {String} json string
      *  @return {any}
      *  */
     static parseJson(json: string): any;
@@ -81,21 +112,21 @@ export declare class OauthUtils {
      * Get Url param
      * #source http://www.netlobo.com/url_query_string_javascript.html
      *
-     * @param {string} name
-     * @param {string} url
-     * @returns {string}
+     * @param {String} name
+     * @param {String} url
+     * @returns {String}
      */
     static getUrlParam(name: string, url?: string): string;
     /**
      * Return url without it's url parameters
-     * @param {string} url Url to strip
-     * @return {string}
+     * @param {String} url Url to strip
+     * @return {String}
      * */
     static stripUrlParams(url: string): string;
     /**
      * Generate Random value
-     * @param {number} length
-     * @return {string}
+     * @param {Number} length
+     * @return {String}
      * */
     static generateKey(length: number): string;
 }
@@ -105,17 +136,15 @@ export declare class Oauth {
     private readonly authorizeUrl;
     private readonly tokenUrl;
     private readonly verifyTokenUrl;
+    static get storage(): OauthStorageInterface<string>;
+    private static _storage;
     /**
-     * @var {OauthStorageInterface<string>}
-     */
-    static storage: OauthStorageInterface<string>;
-    /**
-     * @param {object} data
-     * @param {string} data.clientId - Your Application's Client ID
-     * @param {string} data.clientSecret - Your Application's Client Secret
-     * @param {string} data.authorizeUrl - [GET] Url endpoint to authorize or request access
-     * @param {string} data.tokenUrl - Url endpoint to obtain token
-     * @param {string} data.verifyTokenUrl - [GET] Url endpoint to verify token
+     * @param {Object} data
+     * @param {String} data.clientId - Your Application's Client ID
+     * @param {String} data.clientSecret - Your Application's Client Secret
+     * @param {String} data.authorizeUrl - [GET] Url endpoint to authorize or request access
+     * @param {String} data.tokenUrl - Url endpoint to obtain token
+     * @param {String} data.verifyTokenUrl - [GET] Url endpoint to verify token
      * @param {OauthStorageInterface<string>} data.storage - Handle custom storage - Default storage = browser localStorage or sessionStorage
      * */
     constructor(data: {
@@ -135,14 +164,14 @@ export declare class Oauth {
     clearAccess(): Promise<void>;
     /**
      * Authorize Access to the app
-     * @param {object} params
+     * @param {Object} params
      * @param {OauthGrantType} params.grant_type Default - client_credentials grantType
      * @param {OauthGrantType[]} params.allowed_grant_types grant_type(s) to ignore if {OauthGrantType.Auto} selected
-     * @param {string} params.redirect_uri For authorization_code grant_type default -> current url
-     * @param {string} params.user_id For authorization_code grant_type
-     * @param {string} params.username For password grant_type
-     * @param {string} params.password For password grant_type
-     * @param {(token: string | boolean, msg?: string)} params.callback
+     * @param {String} params.redirect_uri For authorization_code grant_type default -> current url
+     * @param {String} params.user_id For authorization_code grant_type
+     * @param {String} params.username For password grant_type
+     * @param {String} params.password For password grant_type
+     * @param {(token: string | boolean, msg?: string)=>void} params.callback
      * */
     authorizeAccess(params: {
         grant_type?: OauthGrantType;
@@ -156,84 +185,102 @@ export declare class Oauth {
         callback?: (token: string | boolean, msg?: string) => any;
     }): Promise<void>;
     /**
-     * Check if authorization has expired
-     */
-    hasExpired(): Promise<boolean>;
+     * Check if authorization or token has expired
+     * @param {String} token
+     * @return {Promise<boolean>}
+     * */
+    hasExpired(token?: string): Promise<boolean>;
     /**
      * Oauth Authorization
      * @param {string[]} scope
-     * @param {string} redirect_url
-     * @param {string} user_id
-     * @param {string} state
+     * @param {String} redirect_url
+     * @param {String} user_id
+     * @param {String} state
+     * @param {(url: string)=>any} callback
      * */
-    oauthAuthorize(scope: string[], redirect_url: string, user_id: string, state: string): void;
+    oauthAuthorize(scope: string[], redirect_url: string, user_id: string, state: string, callback?: (url: string) => any): void;
     /**
      * Oauth Authorization
      * @param {string[]} scope
-     * @param {string} redirect_url
-     * @param {string} email
-     * @param {string} state
+     * @param {String} redirect_url
+     * @param {String} email
+     * @param {String} state
+     * @param {(url: string)=>any} callback
      * */
-    oauthAuthorizeWithEmail(scope: string[], redirect_url: string, email: string, state: string): void;
+    oauthAuthorizeWithEmail(scope: string[], redirect_url: string, email: string, state: string, callback?: (url: string) => any): void;
     /**
      * Oauth Authorization
      * @param {string[]} scope
-     * @param {string} redirect_url
-     * @param {string} user_id
-     * @param {string} state
+     * @param {String} redirect_url
+     * @param {String} user_id
+     * @param {String} state
+     * @param {(url: string)=>any} callback
      * */
-    oauthAuthorizeImplicit(scope: string[], redirect_url: string, user_id: string, state: string): void;
+    oauthAuthorizeImplicit(scope: string[], redirect_url: string, user_id: string, state: string, callback?: (url: string) => any): void;
     /**
      * Get oauth token with Client credentials
      * @param {string[]} scope
-     * @param {(verify: OauthTokenResponse, xhr: XMLHttpRequest)} callback
+     * @param {(verify: OauthTokenResponse)=>any} callback
      * */
-    oauthTokenWithClientCredentials(scope: string[], callback: (verify: OauthTokenResponse, xhr: XMLHttpRequest) => any): void;
+    oauthTokenWithClientCredentials(scope: string[], callback: (verify: OauthTokenResponse, msg?: string) => any): void;
     /**
      * Get oauth token with Client credentials
-     * @param {string} username
-     * @param {string} password
+     * @param {String} username
+     * @param {String} password
      * @param {string[]} scope
-     * @param {(verify: OauthTokenResponse, xhr: XMLHttpRequest)} callback
+     * @param {(verify: OauthTokenResponse)=>any} callback
      * */
-    oauthTokenWithUserCredentials(username: string, password: string, scope: string[], callback: (verify: OauthTokenResponse, xhr: XMLHttpRequest) => any): void;
+    oauthTokenWithUserCredentials(username: string, password: string, scope: string[], callback: (verify: OauthTokenResponse, msg?: string) => any): void;
     /**Get oauth token with Client credentials
-     * @param {string} code
-     * @param {string} redirect_uri
-     * @param {(verify: OauthTokenResponse, xhr: XMLHttpRequest)} callback
+     * @param {String} code
+     * @param {String} redirect_uri
+     * @param {(verify: OauthTokenResponse)=>any} callback
      * */
-    oauthTokenWithAuthorizationCode(code: string, redirect_uri: string, callback: (verify: OauthTokenResponse, xhr: XMLHttpRequest) => any): void;
+    oauthTokenWithAuthorizationCode(code: string, redirect_uri: string, callback: (verify: OauthTokenResponse, msg?: string) => any): void;
     /**Get oauth Refresh Token with
      * Client credentials
-     * @param {string} refreshToken
-     * @param {(verify: OauthTokenResponse, xhr: XMLHttpRequest)} callback
+     * @param {String} refresh_token
+     * @param {(verify: OauthTokenResponse)=>any} callback
      * */
-    oauthRefreshToken(refreshToken: string, callback: (verify: OauthTokenResponse, xhr: XMLHttpRequest) => any): void;
+    oauthRefreshToken(refresh_token: string, callback: (verify: OauthTokenResponse, msg?: string) => any): void;
     /**
      * Get oauth Refresh Token with
      * Client credentials
-     * @param accessToken string
-     * @param callback function
+     * @param {String} access_token
+     * @param {(verify: OauthVerificationResponse, msg?: string) => any} callback
      * */
-    oauthVerifyToken(accessToken: string, callback: (verify: OauthVerificationResponse, xhr: XMLHttpRequest) => any): void;
+    oauthVerifyToken(access_token: string, callback: (verify: OauthVerificationResponse, msg?: string) => any): void;
 }
-/**Grant Types*/
+/**Grant Types
+ * @enum
+ */
 export declare enum OauthGrantType {
+    /** @type {String} */
     Client_Credentials = "client_credentials",
+    /** @type {String} */
     Authorization_Code = "authorization_code",
+    /** @type {String} */
     User_Credentials = "password",
+    /** @type {String} */
     Refresh_Token = "refresh_token",
+    /** @type {String} */
     Auto = "auto"
 }
-/**Http Request Method*/
+/**Http Request Method
+ * @enum
+ */
 export declare enum OauthRequestMethod {
+    /** @type {String} */
     GET = "get",
+    /** @type {String} */
     POST = "post",
+    /** @type {String} */
     PUT = "put",
+    /** @type {String} */
     DELETE = "delete"
 }
 /**Http Request Params*/
-export interface OauthRequestParams {
+export interface OauthRequestParams<T> {
     url: string;
     headers?: {
         [header: string]: string;
@@ -250,59 +297,71 @@ export interface OauthRequestParams {
     withAccessToken?: boolean;
     accessTokenType?: string;
     accessToken?: string;
-    success?: (xhr?: XMLHttpRequest, result?: string) => any;
-    fail?: (xhr?: XMLHttpRequest) => any;
+    success?: (result?: T) => any;
+    fail?: (result?: T, reason?: string) => any;
 }
 /**Make Oauth Http requests*/
 export declare class OauthRequest {
-    private readonly xhttp;
-    private data;
+    private readonly axhttp;
     private method;
     /**Make GET Requests
      * @param {OauthRequestParams} data
+     * @returns {Promise<T>}
      * */
-    static get(data: OauthRequestParams): void;
+    static get<T>(data: OauthRequestParams<T>): Promise<T>;
     /**Make POST Requests
      * @param {OauthRequestParams} data
+     * @returns {Promise<T>}
      * */
-    static post(data: OauthRequestParams): void;
+    static post<T>(data: OauthRequestParams<T>): Promise<T>;
     /**Make PUT Requests
      * @param {OauthRequestParams} data
+     * @returns {Promise<T>}
      * */
-    static put(data: OauthRequestParams): void;
+    static put<T>(data: OauthRequestParams<T>): Promise<T>;
     /**Make DELETE Requests
      * @param {OauthRequestParams} data
+     * @returns {Promise<T>}
      * */
-    static delete(data: OauthRequestParams): void;
+    static delete<T>(data: OauthRequestParams<T>): Promise<T>;
     /**
      * @param {OauthRequestParams} data
      * @param {OauthRequestMethod} method
      * */
-    constructor(data: OauthRequestParams, method?: OauthRequestMethod);
-    /**Make Http requests*/
-    request(): void;
+    constructor(method?: OauthRequestMethod);
+    /**
+     * Make Http requests
+     * @param {OauthRequestParams<T>} data
+     * @returns {Promise<T>}
+     */
+    request<T>(data: OauthRequestParams<T>): Promise<T>;
 }
 /**Oauth Response*/
 export declare class OauthResponse {
-    /**@return OauthVerificationResponse
-     * @param result string json result
-     * @throws errorDescription
+    /**
+     * @param {String} result json result
+     * @returns {OauthVerificationResponse}
      * */
     static parseVerificationResponse(result: string): OauthVerificationResponse | null;
-    /**@return OauthAuthorizationResponse
-     * @param result string json result
+    /**
+     * @param {String} result json result
+     * @returns {OauthAuthorizationResponse}
      * */
     static parseAuthorizationResponse(result: string): OauthAuthorizationResponse;
-    /**@return OauthTokenResponse
-     * @param result string json result
+    /**
+     * @param {String} result json result
+     * @returns {OauthTokenResponse}
      * */
     static parseTokenResponse(result: string): OauthTokenResponse;
 }
-/**Authorization Response*/
+/**Verification Response*/
 export declare class OauthVerificationResponse {
     success: boolean;
     error: string;
     errorDescription: string;
+    /**
+     * @param {Object} data
+     */
     constructor(data?: object);
 }
 /**Authorization Response*/
@@ -311,9 +370,12 @@ export declare class OauthAuthorizationResponse {
     code: string;
     error: string;
     errorDescription: string;
+    /**
+     * @param {Object} data
+     */
     constructor(data?: object);
 }
-/**Authorization Response*/
+/**Token Response*/
 export declare class OauthTokenResponse {
     accessToken: string;
     refreshToken: string;
@@ -322,5 +384,8 @@ export declare class OauthTokenResponse {
     expiresIn: number;
     error: string;
     errorDescription: string;
+    /**
+     * @param {Object} data
+     */
     constructor(data?: object);
 }
