@@ -1,7 +1,7 @@
 {
   "name": "busarm-oauth-client-js",
   "description": "OAuth 2.0 JS Client based on RFC6749 standards",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "keywords": [
     "oauth",
     "oauth2",

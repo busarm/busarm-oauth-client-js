@@ -34,11 +34,12 @@ var __awaiter =
         });
     };
 import axios from 'axios';
+import { Buffer } from 'buffer';
 /**
  * Oauth Storage Keys
  * @enum
  */
-export var OauthStorageKeys;
+var OauthStorageKeys;
 (function (OauthStorageKeys) {
     /** @type {String} */
     OauthStorageKeys['AccessTokenKey'] = 'access_token';
@@ -53,7 +54,13 @@ export var OauthStorageKeys;
     /** @type {String} */
     OauthStorageKeys['CurrentStateKey'] = 'current_state';
 })(OauthStorageKeys || (OauthStorageKeys = {}));
-export class OauthStorage {
+/**
+ * OAuth Default Storage
+ * - localstorage for persistant storage
+ * - sessionstorage for temporary storage
+ * @class
+ */
+class OauthStorage {
     get(key) {
         return new Promise((resolve) => {
             if (typeof localStorage !== 'undefined') {
@@ -113,16 +120,23 @@ export class OauthStorage {
         });
     }
 }
-/**Common Functions*/
-export class OauthUtils {
+/**Common Utils Functions
+ * @class
+ * */
+class OauthUtils {
     /**
      * Check if token is a JWT token and return claims if so
-     * @return {String}
-     * */
-    static parseJWT(token) {
+     *
+     * @param {String} token
+     * @param {String} type  - "header" | "claims" | "signature". Default "claims"
+     * @returns {String}
+     */
+    static parseJWT(token, type = 'claims') {
+        if (!token || token == '') return null;
         let split = token.split('.');
+        let index = type == 'signature' ? 2 : type == 'claims' ? 1 : 0;
         return split && split.length == 3
-            ? Buffer.from(split[1]).toString('base64')
+            ? Buffer.from(split[index], 'base64').toString('ascii')
             : null;
     }
     /**
@@ -133,7 +147,16 @@ export class OauthUtils {
     static hasJWTExpired(token) {
         let data = this.parseJson(this.parseJWT(token));
         let exp = data ? data['exp'] : null;
-        return exp ? parseInt(exp) < Math.floor(Date.now() / 1000) + 10 : true; // + 10 to account for any network latency
+        return this.hasExpired(+exp);
+    }
+    /**
+     * Check given timestamp has expired
+     * @param {Number} exp
+     * @param {Number} buffer Buffer time in seconds to account for any unexpected delays e.g network latency
+     * @return {boolean}
+     * */
+    static hasExpired(exp, buffer = 5) {
+        return exp ? exp < Math.floor(Date.now() / 1000) + buffer : true;
     }
     /**
      * Get a safe form of string to store,
@@ -335,7 +358,7 @@ export class OauthUtils {
         return text;
     }
 }
-export class Oauth {
+class Oauth {
     /**
      * @param {Object} data
      * @param {String} data.clientId - Your Application's Client ID
@@ -424,7 +447,10 @@ export class Oauth {
         });
     }
     /**
-     * Authorize Access to the app
+     * Authorize Access to the app.
+     * This will check for and validate existing access token.
+     * If no access was previously granted, it will then proceed to request one with the details given.
+     * If token has expired and a refresh token exists, it will then proceed to refresh the expired token
      * @param {Object} params
      * @param {OauthGrantType} params.grant_type Default - client_credentials grantType
      * @param {OauthGrantType[]} params.allowed_grant_types grant_type(s) to ignore if {OauthGrantType.Auto} selected
@@ -905,20 +931,14 @@ export class Oauth {
                 token ||
                 (yield Oauth.storage.get(OauthStorageKeys.AccessTokenKey));
             if (OauthUtils.assertAvailable(token)) {
-                if (
-                    OauthUtils.parseJWT(token) &&
-                    !OauthUtils.hasJWTExpired(token)
-                ) {
+                if (!OauthUtils.hasJWTExpired(token)) {
                     return false;
                 } else {
                     let expiresIn = yield Oauth.storage.get(
                         OauthStorageKeys.ExpiresInKey
                     );
                     if (OauthUtils.assertAvailable(expiresIn)) {
-                        return (
-                            parseInt(expiresIn) <
-                            Math.floor(Date.now() / 1000) + 10
-                        ); // + 10 to account for any network latency
+                        return OauthUtils.hasExpired(+expiresIn);
                     }
                 }
             }
@@ -1179,7 +1199,7 @@ Oauth._storage = new OauthStorage();
 /**Grant Types
  * @enum
  */
-export var OauthGrantType;
+var OauthGrantType;
 (function (OauthGrantType) {
     /** @type {String} */
     OauthGrantType['Client_Credentials'] = 'client_credentials';
@@ -1195,7 +1215,7 @@ export var OauthGrantType;
 /**Http Request Method
  * @enum
  */
-export var OauthRequestMethod;
+var OauthRequestMethod;
 (function (OauthRequestMethod) {
     /** @type {String} */
     OauthRequestMethod['GET'] = 'get';
@@ -1206,8 +1226,10 @@ export var OauthRequestMethod;
     /** @type {String} */
     OauthRequestMethod['DELETE'] = 'delete';
 })(OauthRequestMethod || (OauthRequestMethod = {}));
-/**Make Oauth Http requests*/
-export class OauthRequest {
+/**Make Oauth Http requests
+ * @class
+ * */
+class OauthRequest {
     /**
      * @param {OauthRequestParams} data
      * @param {OauthRequestMethod} method
@@ -1305,8 +1327,10 @@ export class OauthRequest {
         });
     }
 }
-/**Oauth Response*/
-export class OauthResponse {
+/**Oauth Response
+ * @class
+ * */
+class OauthResponse {
     /**
      * @param {String} result json result
      * @returns {OauthVerificationResponse}
@@ -1350,8 +1374,10 @@ export class OauthResponse {
         return null;
     }
 }
-/**Verification Response*/
-export class OauthVerificationResponse {
+/**Verification Response
+ * @class
+ * */
+class OauthVerificationResponse {
     /**
      * @param {Object} data
      */
@@ -1362,8 +1388,10 @@ export class OauthVerificationResponse {
         this.errorDescription = data['error_description'];
     }
 }
-/**Authorization Response*/
-export class OauthAuthorizationResponse {
+/**Authorization Respons
+ * @class
+ * */
+class OauthAuthorizationResponse {
     /**
      * @param {Object} data
      */
@@ -1375,8 +1403,10 @@ export class OauthAuthorizationResponse {
         this.errorDescription = data['error_description'];
     }
 }
-/**Token Response*/
-export class OauthTokenResponse {
+/**Token Response
+ * @class
+ * */
+class OauthTokenResponse {
     /**
      * @param {Object} data
      */
@@ -1391,3 +1421,16 @@ export class OauthTokenResponse {
         this.errorDescription = data['error_description'];
     }
 }
+export {
+    OauthStorageKeys,
+    OauthStorage,
+    OauthUtils,
+    Oauth,
+    OauthGrantType,
+    OauthRequestMethod,
+    OauthRequest,
+    OauthResponse,
+    OauthVerificationResponse,
+    OauthAuthorizationResponse,
+    OauthTokenResponse,
+};

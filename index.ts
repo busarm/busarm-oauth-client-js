@@ -1,7 +1,10 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
+import { Buffer } from "buffer";
 
-/**Store and Retrieve Oauth variables*/
-export interface OauthStorageInterface<T> {
+/**Store and Retrieve Oauth variables
+ * @interface
+ */
+interface OauthStorageInterface<T> {
     /**
      * Get Item from storage
      * @param {String} key
@@ -33,7 +36,7 @@ export interface OauthStorageInterface<T> {
  * Oauth Storage Keys
  * @enum
  */
-export enum OauthStorageKeys {
+enum OauthStorageKeys {
     /** @type {String} */
     AccessTokenKey = "access_token",
     /** @type {String} */
@@ -47,7 +50,14 @@ export enum OauthStorageKeys {
     /** @type {String} */
     CurrentStateKey = "current_state",
 }
-export class OauthStorage implements OauthStorageInterface<string> {
+
+/**
+ * OAuth Default Storage
+ * - localstorage for persistant storage
+ * - sessionstorage for temporary storage
+ * @class
+ */
+class OauthStorage implements OauthStorageInterface<string> {
     get(key: string): Promise<string> {
         return new Promise((resolve) => {
             if (typeof localStorage !== "undefined") {
@@ -108,16 +118,26 @@ export class OauthStorage implements OauthStorageInterface<string> {
     }
 }
 
-/**Common Functions*/
-export class OauthUtils {
+/**Common Utils Functions
+ * @class
+ * */
+class OauthUtils {
     /**
      * Check if token is a JWT token and return claims if so
-     * @return {String}
-     * */
-    static parseJWT(token: string): string {
+     *
+     * @param {String} token
+     * @param {String} type  - "header" | "claims" | "signature". Default "claims"
+     * @returns {String}
+     */
+    static parseJWT(
+        token: string,
+        type: "header" | "claims" | "signature" = "claims"
+    ): string {
+        if (!token || token == "") return null;
         let split = token.split(".");
+        let index = type == "signature" ? 2 : type == "claims" ? 1 : 0;
         return split && split.length == 3
-            ? Buffer.from(split[1]).toString("base64")
+            ? Buffer.from(split[index], "base64").toString("ascii")
             : null;
     }
 
@@ -129,7 +149,17 @@ export class OauthUtils {
     static hasJWTExpired(token: string): boolean {
         let data = this.parseJson(this.parseJWT(token));
         let exp = data ? data["exp" as keyof object] : null;
-        return exp ? parseInt(exp) < Math.floor(Date.now() / 1000) + 10 : true; // + 10 to account for any network latency
+        return this.hasExpired(+exp);
+    }
+
+    /**
+     * Check given timestamp has expired
+     * @param {Number} exp
+     * @param {Number} buffer Buffer time in seconds to account for any unexpected delays e.g network latency
+     * @return {boolean}
+     * */
+    static hasExpired(exp: number, buffer: number = 5): boolean {
+        return exp ? exp < Math.floor(Date.now() / 1000) + buffer : true;
     }
 
     /**
@@ -347,7 +377,7 @@ export class OauthUtils {
     }
 }
 
-export class Oauth {
+class Oauth {
     private readonly clientId: string;
     private readonly clientSecret: string;
     private readonly authorizeUrl: string;
@@ -455,7 +485,10 @@ export class Oauth {
     }
 
     /**
-     * Authorize Access to the app
+     * Authorize Access to the app.
+     * This will check for and validate existing access token.
+     * If no access was previously granted, it will then proceed to request one with the details given.
+     * If token has expired and a refresh token exists, it will then proceed to refresh the expired token
      * @param {Object} params
      * @param {OauthGrantType} params.grant_type Default - client_credentials grantType
      * @param {OauthGrantType[]} params.allowed_grant_types grant_type(s) to ignore if {OauthGrantType.Auto} selected
@@ -859,19 +892,14 @@ export class Oauth {
         token =
             token || (await Oauth.storage.get(OauthStorageKeys.AccessTokenKey));
         if (OauthUtils.assertAvailable(token)) {
-            if (
-                OauthUtils.parseJWT(token) &&
-                !OauthUtils.hasJWTExpired(token)
-            ) {
+            if (!OauthUtils.hasJWTExpired(token)) {
                 return false;
             } else {
                 let expiresIn = await Oauth.storage.get(
                     OauthStorageKeys.ExpiresInKey
                 );
                 if (OauthUtils.assertAvailable(expiresIn)) {
-                    return (
-                        parseInt(expiresIn) < Math.floor(Date.now() / 1000) + 10
-                    ); // + 10 to account for any network latency
+                    return OauthUtils.hasExpired(+expiresIn);
                 }
             }
         }
@@ -1183,7 +1211,7 @@ export class Oauth {
 /**Grant Types
  * @enum
  */
-export enum OauthGrantType {
+enum OauthGrantType {
     /** @type {String} */
     Client_Credentials = "client_credentials",
     /** @type {String} */
@@ -1199,7 +1227,7 @@ export enum OauthGrantType {
 /**Http Request Method
  * @enum
  */
-export enum OauthRequestMethod {
+enum OauthRequestMethod {
     /** @type {String} */
     GET = "get",
     /** @type {String} */
@@ -1210,8 +1238,10 @@ export enum OauthRequestMethod {
     DELETE = "delete",
 }
 
-/**Http Request Params*/
-export interface OauthRequestParams<T> {
+/**Http Request Params
+ * @interface
+ * */
+interface OauthRequestParams<T> {
     url: string;
     headers?: {
         [header: string]: string;
@@ -1232,8 +1262,10 @@ export interface OauthRequestParams<T> {
     fail?: (result?: T, reason?: string) => any;
 }
 
-/**Make Oauth Http requests*/
-export class OauthRequest {
+/**Make Oauth Http requests
+ * @class
+ * */
+class OauthRequest {
     private readonly axhttp: AxiosInstance;
     private method: OauthRequestMethod;
 
@@ -1341,8 +1373,10 @@ export class OauthRequest {
     }
 }
 
-/**Oauth Response*/
-export class OauthResponse {
+/**Oauth Response
+ * @class
+ * */
+class OauthResponse {
     /**
      * @param {String} result json result
      * @returns {OauthVerificationResponse}
@@ -1393,8 +1427,10 @@ export class OauthResponse {
     }
 }
 
-/**Verification Response*/
-export class OauthVerificationResponse {
+/**Verification Response
+ * @class
+ * */
+class OauthVerificationResponse {
     public success: boolean;
     public error: string;
     public errorDescription: string;
@@ -1410,8 +1446,10 @@ export class OauthVerificationResponse {
     }
 }
 
-/**Authorization Response*/
-export class OauthAuthorizationResponse {
+/**Authorization Respons
+ * @class
+ * */
+class OauthAuthorizationResponse {
     public state: string;
     public code: string;
     public error: string;
@@ -1430,8 +1468,10 @@ export class OauthAuthorizationResponse {
     }
 }
 
-/**Token Response*/
-export class OauthTokenResponse {
+/**Token Response
+ * @class
+ * */
+class OauthTokenResponse {
     public accessToken: string;
     public refreshToken: string;
     public tokenType: string;
@@ -1455,3 +1495,19 @@ export class OauthTokenResponse {
         this.errorDescription = data["error_description" as keyof object];
     }
 }
+
+export {
+    OauthStorageInterface,
+    OauthStorageKeys,
+    OauthStorage,
+    OauthUtils,
+    Oauth,
+    OauthGrantType,
+    OauthRequestMethod,
+    OauthRequestParams,
+    OauthRequest,
+    OauthResponse,
+    OauthVerificationResponse,
+    OauthAuthorizationResponse,
+    OauthTokenResponse,
+};

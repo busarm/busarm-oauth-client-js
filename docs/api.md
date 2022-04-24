@@ -28,9 +28,16 @@ Type: [String][1]
 
 Type: [String][1]
 
+## OauthStorage
+
+OAuth Default Storage
+
+*   localstorage for persistant storage
+*   sessionstorage for temporary storage
+
 ## OauthUtils
 
-Common Functions
+Common Utils Functions
 
 ### parseJWT
 
@@ -38,7 +45,8 @@ Check if token is a JWT token and return claims if so
 
 #### Parameters
 
-*   `token`  
+*   `token` **[String][1]** 
+*   `type` **[String][1]** "header" | "claims" | "signature". Default "claims" (optional, default `'claims'`)
 
 Returns **[String][1]** 
 
@@ -49,6 +57,17 @@ Check if JWT Token has expired
 #### Parameters
 
 *   `token` **[String][1]** 
+
+Returns **[boolean][2]** 
+
+### hasExpired
+
+Check given timestamp has expired
+
+#### Parameters
+
+*   `exp` **[Number][3]** 
+*   `buffer` **[Number][3]** Buffer time in seconds to account for any unexpected delays e.g network latency (optional, default `5`)
 
 Returns **[boolean][2]** 
 
@@ -185,7 +204,10 @@ Clear all access data from session
 
 ## authorizeAccess
 
-Authorize Access to the app
+Authorize Access to the app.
+This will check for and validate existing access token.
+If no access was previously granted, it will then proceed to request one with the details given.
+If token has expired and a refresh token exists, it will then proceed to refresh the expired token
 
 ### Parameters
 
@@ -479,7 +501,7 @@ Verification Response
 
 ## OauthAuthorizationResponse
 
-Authorization Response
+Authorization Respons
 
 ### Parameters
 

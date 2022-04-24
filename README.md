@@ -6,6 +6,8 @@ OAuth 2.0 JS Client based on [RFC6749](https://datatracker.ietf.org/doc/html/rfc
 ## Documentation
 - [Usage](./docs/usage.md)
 - [Node API](./docs/api.md)
+- [Example - NodeJs](./docs/example.js)
+- [Example - Browser](./docs/example.html)
 
 ## Install - Nodejs
 

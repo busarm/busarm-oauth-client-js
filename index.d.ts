@@ -1,5 +1,7 @@
-/**Store and Retrieve Oauth variables*/
-export interface OauthStorageInterface<T> {
+/**Store and Retrieve Oauth variables
+ * @interface
+ */
+interface OauthStorageInterface<T> {
     /**
      * Get Item from storage
      * @param {String} key
@@ -31,7 +33,7 @@ export interface OauthStorageInterface<T> {
  * Oauth Storage Keys
  * @enum
  */
-export declare enum OauthStorageKeys {
+declare enum OauthStorageKeys {
     /** @type {String} */
     AccessTokenKey = "access_token",
     /** @type {String} */
@@ -45,25 +47,43 @@ export declare enum OauthStorageKeys {
     /** @type {String} */
     CurrentStateKey = "current_state"
 }
-export declare class OauthStorage implements OauthStorageInterface<string> {
+/**
+ * OAuth Default Storage
+ * - localstorage for persistant storage
+ * - sessionstorage for temporary storage
+ * @class
+ */
+declare class OauthStorage implements OauthStorageInterface<string> {
     get(key: string): Promise<string>;
     set(key: string, value: string, temporary?: boolean): Promise<void>;
     remove(key: string): Promise<void>;
     clearAll(temporary?: boolean): Promise<void>;
 }
-/**Common Functions*/
-export declare class OauthUtils {
+/**Common Utils Functions
+ * @class
+ * */
+declare class OauthUtils {
     /**
      * Check if token is a JWT token and return claims if so
-     * @return {String}
-     * */
-    static parseJWT(token: string): string;
+     *
+     * @param {String} token
+     * @param {String} type  - "header" | "claims" | "signature". Default "claims"
+     * @returns {String}
+     */
+    static parseJWT(token: string, type?: "header" | "claims" | "signature"): string;
     /**
      * Check if JWT Token has expired
      * @param {String} token
      * @return {boolean}
      * */
     static hasJWTExpired(token: string): boolean;
+    /**
+     * Check given timestamp has expired
+     * @param {Number} exp
+     * @param {Number} buffer Buffer time in seconds to account for any unexpected delays e.g network latency
+     * @return {boolean}
+     * */
+    static hasExpired(exp: number, buffer?: number): boolean;
     /**
      * Get a safe form of string to store,
      * eliminating null and 'undefined'
@@ -130,7 +150,7 @@ export declare class OauthUtils {
      * */
     static generateKey(length: number): string;
 }
-export declare class Oauth {
+declare class Oauth {
     private readonly clientId;
     private readonly clientSecret;
     private readonly authorizeUrl;
@@ -163,7 +183,10 @@ export declare class Oauth {
     /**Clear all access data from session*/
     clearAccess(): Promise<void>;
     /**
-     * Authorize Access to the app
+     * Authorize Access to the app.
+     * This will check for and validate existing access token.
+     * If no access was previously granted, it will then proceed to request one with the details given.
+     * If token has expired and a refresh token exists, it will then proceed to refresh the expired token
      * @param {Object} params
      * @param {OauthGrantType} params.grant_type Default - client_credentials grantType
      * @param {OauthGrantType[]} params.allowed_grant_types grant_type(s) to ignore if {OauthGrantType.Auto} selected
@@ -254,7 +277,7 @@ export declare class Oauth {
 /**Grant Types
  * @enum
  */
-export declare enum OauthGrantType {
+declare enum OauthGrantType {
     /** @type {String} */
     Client_Credentials = "client_credentials",
     /** @type {String} */
@@ -269,7 +292,7 @@ export declare enum OauthGrantType {
 /**Http Request Method
  * @enum
  */
-export declare enum OauthRequestMethod {
+declare enum OauthRequestMethod {
     /** @type {String} */
     GET = "get",
     /** @type {String} */
@@ -279,8 +302,10 @@ export declare enum OauthRequestMethod {
     /** @type {String} */
     DELETE = "delete"
 }
-/**Http Request Params*/
-export interface OauthRequestParams<T> {
+/**Http Request Params
+ * @interface
+ * */
+interface OauthRequestParams<T> {
     url: string;
     headers?: {
         [header: string]: string;
@@ -300,8 +325,10 @@ export interface OauthRequestParams<T> {
     success?: (result?: T) => any;
     fail?: (result?: T, reason?: string) => any;
 }
-/**Make Oauth Http requests*/
-export declare class OauthRequest {
+/**Make Oauth Http requests
+ * @class
+ * */
+declare class OauthRequest {
     private readonly axhttp;
     private method;
     /**Make GET Requests
@@ -336,8 +363,10 @@ export declare class OauthRequest {
      */
     request<T>(data: OauthRequestParams<T>): Promise<T>;
 }
-/**Oauth Response*/
-export declare class OauthResponse {
+/**Oauth Response
+ * @class
+ * */
+declare class OauthResponse {
     /**
      * @param {String} result json result
      * @returns {OauthVerificationResponse}
@@ -354,8 +383,10 @@ export declare class OauthResponse {
      * */
     static parseTokenResponse(result: string): OauthTokenResponse;
 }
-/**Verification Response*/
-export declare class OauthVerificationResponse {
+/**Verification Response
+ * @class
+ * */
+declare class OauthVerificationResponse {
     success: boolean;
     error: string;
     errorDescription: string;
@@ -364,8 +395,10 @@ export declare class OauthVerificationResponse {
      */
     constructor(data?: object);
 }
-/**Authorization Response*/
-export declare class OauthAuthorizationResponse {
+/**Authorization Respons
+ * @class
+ * */
+declare class OauthAuthorizationResponse {
     state: string;
     code: string;
     error: string;
@@ -375,8 +408,10 @@ export declare class OauthAuthorizationResponse {
      */
     constructor(data?: object);
 }
-/**Token Response*/
-export declare class OauthTokenResponse {
+/**Token Response
+ * @class
+ * */
+declare class OauthTokenResponse {
     accessToken: string;
     refreshToken: string;
     tokenType: string;
@@ -389,3 +424,4 @@ export declare class OauthTokenResponse {
      */
     constructor(data?: object);
 }
+export { OauthStorageInterface, OauthStorageKeys, OauthStorage, OauthUtils, Oauth, OauthGrantType, OauthRequestMethod, OauthRequestParams, OauthRequest, OauthResponse, OauthVerificationResponse, OauthAuthorizationResponse, OauthTokenResponse, };

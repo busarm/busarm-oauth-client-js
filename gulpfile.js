@@ -70,7 +70,7 @@ const jsRollupTask = function () {
             plugins: [
                 // babel({ babelHelpers: "bundled" }),
                 commonjs(),
-                nodeResolve({ browser: true, preferBuiltins: true }),
+                nodeResolve({ browser: true, preferBuiltins: false }),
             ],
             // Use cache for better performance
             cache: cache,
