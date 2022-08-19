@@ -1278,6 +1278,7 @@ class OauthRequest {
      * @returns {Promise<T>}
      */
     request(data) {
+        var _a, _b;
         return __awaiter(this, void 0, void 0, function* () {
             // Set options
             let options = {
@@ -1313,8 +1314,15 @@ class OauthRequest {
                 return null;
             } catch (e) {
                 if (axios.isAxiosError(e)) {
-                    data.fail(e.response.data, e.message);
-                    return e.response.data;
+                    data.fail(
+                        (_a = e.response) === null || _a === void 0
+                            ? void 0
+                            : _a.data,
+                        e.message
+                    );
+                    return (_b = e.response) === null || _b === void 0
+                        ? void 0
+                        : _b.data;
                 } else if (e instanceof Error) {
                     data.fail(null, e.message);
                 } else if (typeof e === 'string') {

@@ -70,7 +70,7 @@ declare class OauthUtils {
      * @param {String} type  - "header" | "claims" | "signature". Default "claims"
      * @returns {String}
      */
-    static parseJWT(token: string, type?: "header" | "claims" | "signature"): string;
+    static parseJWT(token: string, type?: 'header' | 'claims' | 'signature'): string;
     /**
      * Check if JWT Token has expired
      * @param {String} token

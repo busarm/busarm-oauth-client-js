@@ -122,23 +122,20 @@ const watcherTask = function () {
         {
             ignoreInitial: true,
         },
-        gulp.series(
-            tsDocsTask,
-            tsTask,
-            jsFormatterTask,
-            jsRollupTask,
-            jsMinifyTask
-        )
+        gulp.series(tsDocsTask, tsTask, jsFormatterTask, jsRollupTask, jsMinifyTask)
     );
 };
 
-const _default = gulp.series(
+export const build = gulp.series(
     tsFormatterTask,
     tsDocsTask,
     tsTask,
     jsFormatterTask,
     jsRollupTask,
     jsMinifyTask,
+);
+
+export default gulp.series(
+    build,
     watcherTask
 );
-export { _default as default };
